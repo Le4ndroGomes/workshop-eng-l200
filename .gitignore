@@ -1,0 +1,6 @@
+.isaac
+tasks
+__pycache__/
+*.pyc
+.DS_Store
+.databricks-resources.json
