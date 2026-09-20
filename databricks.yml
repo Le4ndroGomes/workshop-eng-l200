@@ -1,0 +1,50 @@
+# Databricks Asset Bundle (opcional) — Workshop Amil x Databricks (L200)
+# Alternativa ao deploy.sh para publicar os artefatos do workshop.
+#
+# Uso:
+#   databricks bundle deploy -t dev
+#
+bundle:
+  name: amil-workshop-trilha-tech
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://adb-7405610863872788.8.azuredatabricks.net
+      root_path: /Workspace/Shared/amil-workshop-trilha-tech/.bundle/${bundle.name}
+
+# Os notebooks são publicados como arquivos do workspace. Para orquestrar o
+# pipeline como Job, descomente o bloco abaixo e ajuste warehouse_id/serverless
+# conforme o ambiente. Note que a ordem das tarefas reproduz as dependências
+# reais entre tabelas — é justamente isso que o Lakeflow Declarative Pipeline
+# (notebooks/07_lakeflow_pipeline.sql) deduz sozinho.
+#
+# resources:
+#   jobs:
+#     custo_assistencial_pipeline:
+#       name: "Amil - Pipeline Custo Assistencial (Workshop)"
+#       tasks:
+#         - task_key: bronze
+#           notebook_task:
+#             notebook_path: ./01-engenharia-dados/respostas/01_bronze_ingestao.sql
+#         - task_key: silver_dimensoes
+#           depends_on: [{ task_key: bronze }]
+#           notebook_task:
+#             notebook_path: ./01-engenharia-dados/respostas/02_silver_prestador_estabelecimento.sql
+#         - task_key: silver_contas
+#           depends_on: [{ task_key: silver_dimensoes }]
+#           notebook_task:
+#             notebook_path: ./01-engenharia-dados/respostas/03_silver_contas_medicas.sql
+#         - task_key: silver_vigencias
+#           depends_on: [{ task_key: silver_dimensoes }]
+#           notebook_task:
+#             notebook_path: ./01-engenharia-dados/respostas/04_silver_vigencias_credenciamento.sql
+#         - task_key: gold
+#           depends_on: [{ task_key: silver_contas }, { task_key: silver_vigencias }]
+#           notebook_task:
+#             notebook_path: ./01-engenharia-dados/respostas/05_gold_custo_utilizacao.sql
+#         - task_key: qualidade
+#           depends_on: [{ task_key: gold }]
+#           notebook_task:
+#             notebook_path: ./01-engenharia-dados/respostas/06_qualidade_dados.sql
