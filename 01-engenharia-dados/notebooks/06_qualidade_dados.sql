@@ -1,5 +1,37 @@
 -- Databricks notebook source
 -- MAGIC %md
+-- MAGIC <img src="../../assets/images/db-academy.png" alt="Databricks Academy" width="320"/>
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC <div style="
+-- MAGIC   border-left: 4px solid #1976d2;
+-- MAGIC   background: #e3f2fd;
+-- MAGIC   padding: 14px 18px;
+-- MAGIC   border-radius: 4px;
+-- MAGIC   margin: 16px 0;
+-- MAGIC ">
+-- MAGIC <div style="color:#333;">
+-- MAGIC
+-- MAGIC #### Informações do ambiente
+-- MAGIC
+-- MAGIC - Você trabalha em um <strong>schema pessoal</strong> dentro do catálogo <strong>amil_workshop_trilha_tech</strong>, derivado do seu usuário (ex.: <strong>maria_silva</strong>).
+-- MAGIC
+-- MAGIC - O schema e os dados sintéticos são criados pelo notebook <strong>00-setup/setup_participantes.py</strong>, que deve ser executado <strong>uma única vez</strong> antes dos módulos.
+-- MAGIC
+-- MAGIC - São necessárias permissões de <strong>CREATE SCHEMA</strong> e <strong>CREATE TABLE</strong> no catálogo. Sem permissão de <strong>CREATE CATALOG</strong>, aponte a variável <code>CATALOG</code> do setup para um catálogo que você já tenha.
+-- MAGIC
+-- MAGIC - Rode os módulos <strong>em ordem</strong>: cada um lê as tabelas criadas pelo anterior.
+-- MAGIC
+-- MAGIC - <strong>Todos os dados utilizados no workshop são sintéticos e não representam pacientes, prestadores ou contratos reais.</strong>
+-- MAGIC
+-- MAGIC </div>
+-- MAGIC </div>
+
+-- COMMAND ----------
+
+-- MAGIC %md
 -- MAGIC # Módulo 06 — Qualidade de dados: painel e porta de qualidade
 -- MAGIC
 -- MAGIC Nos módulos 02–05 as regras de qualidade ficaram **dentro** das transformações.

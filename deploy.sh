@@ -25,6 +25,12 @@ fi
 echo ">> Criando diretório destino..."
 databricks --profile "${PROFILE}" workspace mkdirs "${WS_DEST}" || true
 
+echo ">> Importando imagens (cabeçalho dos notebooks)..."
+databricks --profile "${PROFILE}" workspace mkdirs "${WS_DEST}/assets/images" || true
+databricks --profile "${PROFILE}" workspace import \
+  --format RAW --file "${SCRIPT_DIR}/assets/images/db-academy.png" \
+  "${WS_DEST}/assets/images/db-academy.png" --overwrite
+
 echo ">> Importando notebooks de setup..."
 databricks --profile "${PROFILE}" workspace import-dir \
   "${SCRIPT_DIR}/00-setup" "${WS_DEST}/00-setup" --overwrite
