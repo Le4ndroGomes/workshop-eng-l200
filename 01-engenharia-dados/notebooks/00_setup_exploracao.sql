@@ -14,20 +14,31 @@
 -- MAGIC ">
 -- MAGIC <div style="color:#333;">
 -- MAGIC
--- MAGIC #### Informações do ambiente
+```text
+-- MAGIC #### Verificação de integridade referencial
 -- MAGIC
--- MAGIC - Você trabalha em um <strong>schema pessoal</strong> dentro do catálogo <strong>amil_workshop_trilha_tech</strong>, derivado do seu usuário (ex.: <strong>maria_silva</strong>).
+-- MAGIC Verifique se existem registros sem correspondência entre as tabelas.
 -- MAGIC
--- MAGIC - O schema e os dados sintéticos são criados pelo notebook <strong>00-setup/setup_participantes.py</strong>, que deve ser executado <strong>uma única vez</strong> antes dos módulos.
+-- MAGIC 1. Conte quantos prestadores não possuem um estabelecimento correspondente.
+-- MAGIC 2. Depois, conte quantas contas médicas não possuem um prestador correspondente.
 -- MAGIC
--- MAGIC - São necessárias permissões de <strong>CREATE SCHEMA</strong> e <strong>CREATE TABLE</strong> no catálogo. Sem permissão de <strong>CREATE CATALOG</strong>, aponte a variável <code>CATALOG</code> do setup para um catálogo que você já tenha.
+-- MAGIC Para fazer essas verificações, use os campos que relacionam as tabelas entre si e considere como "sem correspondência" os registros que não encontram seu registro relacionado na outra tabela.
 -- MAGIC
--- MAGIC - Rode os módulos <strong>em ordem</strong>: cada um lê as tabelas criadas pelo anterior.
+-- MAGIC No primeiro caso, compare prestadores e estabelecimentos pelo `CD_ESTABELECIMENTO`.
 -- MAGIC
--- MAGIC - <strong>Todos os dados utilizados no workshop são sintéticos e não representam pacientes, prestadores ou contratos reais.</strong>
+-- MAGIC No segundo caso, compare contas médicas e prestadores pelo campo que identifica o prestador.
 -- MAGIC
--- MAGIC </div>
--- MAGIC </div>
+-- MAGIC Use as tabelas:
+-- MAGIC
+-- MAGIC - `raw_sgr_tb_prestador`
+-- MAGIC - `raw_sgr_tb_estabelecimento`
+-- MAGIC - `raw_sia_tb_conta_medica`
+-- MAGIC
+-- MAGIC O schema deve ser referenciado dinamicamente usando `IDENTIFIER(meu_schema || '.nome_da_tabela')`.
+-- MAGIC
+-- MAGIC Retorne apenas a quantidade de registros sem correspondência em cada caso.
+```
+
 
 -- COMMAND ----------
 
