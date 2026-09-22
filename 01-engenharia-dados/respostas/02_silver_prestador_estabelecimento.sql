@@ -40,8 +40,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -50,7 +53,7 @@ DECLARE OR REPLACE VARIABLE meu_schema STRING
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento') AS
+CREATE OR REPLACE TABLE slv_prestador_estabelecimento AS
 WITH prestador_limpo AS (
   SELECT
     CAST(NU_PRESTADOR AS BIGINT)                    AS NU_PRESTADOR,
@@ -65,7 +68,7 @@ WITH prestador_limpo AS (
     CAST(DT_DESCREDENCIAMENTO AS DATE)              AS DT_DESCREDENCIAMENTO,
     CAST(CD_MOTIVO_DESCREDENCIAMENTO AS INT)        AS CD_MOTIVO_DESCREDENCIAMENTO,
     CAST(NU_CAPACIDADE_ATEND_MES AS INT)            AS NU_CAPACIDADE_ATEND_MES
-  FROM IDENTIFIER(meu_schema || '.brz_prestador')
+  FROM brz_prestador
   WHERE CAST(FL_EXCLUIDO AS INT) = 0                          -- QUALIDADE 2
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY NU_PRESTADOR ORDER BY dt_carga_bronze DESC
@@ -82,7 +85,7 @@ estabelecimento_limpo AS (
     CAST(DT_INICIO_OPERACAO AS DATE)        AS DT_INICIO_OPERACAO,
     CAST(NU_LEITOS AS INT)                  AS NU_LEITOS,
     CAST(NU_CNPJ AS DECIMAL(38,0))          AS NU_CNPJ
-  FROM IDENTIFIER(meu_schema || '.brz_estabelecimento')
+  FROM brz_estabelecimento
   WHERE CAST(FL_EXCLUIDO AS INT) = 0
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY CD_ESTABELECIMENTO ORDER BY dt_carga_bronze DESC
@@ -114,15 +117,15 @@ INNER JOIN estabelecimento_limpo e                            -- QUALIDADE 4
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.qua_prestador_orfao') AS
+CREATE OR REPLACE TABLE qua_prestador_orfao AS
 SELECT
   CAST(p.NU_PRESTADOR AS BIGINT)       AS NU_PRESTADOR,
   CAST(p.CD_ESTABELECIMENTO AS BIGINT) AS CD_ESTABELECIMENTO,
   p.CD_CNES,
   'CD_ESTABELECIMENTO sem correspondencia em brz_estabelecimento' AS motivo_quarentena,
   CURRENT_TIMESTAMP()                  AS dt_quarentena
-FROM IDENTIFIER(meu_schema || '.brz_prestador') p
-LEFT JOIN IDENTIFIER(meu_schema || '.brz_estabelecimento') e
+FROM brz_prestador p
+LEFT JOIN brz_estabelecimento e
        ON e.CD_ESTABELECIMENTO = p.CD_ESTABELECIMENTO
 WHERE CAST(p.FL_EXCLUIDO AS INT) = 0
   AND e.CD_ESTABELECIMENTO IS NULL;
@@ -135,7 +138,7 @@ WHERE CAST(p.FL_EXCLUIDO AS INT) = 0
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.slv_beneficiario_plano') AS
+CREATE OR REPLACE TABLE slv_beneficiario_plano AS
 WITH beneficiario_limpo AS (
   SELECT
     CAST(NU_BENEFICIARIO AS BIGINT)   AS NU_BENEFICIARIO,
@@ -148,7 +151,7 @@ WITH beneficiario_limpo AS (
     CAST(DT_ADESAO AS DATE)           AS DT_ADESAO,
     CAST(DT_CANCELAMENTO AS DATE)     AS DT_CANCELAMENTO,
     CAST(FL_ATIVO AS INT)             AS FL_ATIVO
-  FROM IDENTIFIER(meu_schema || '.brz_beneficiario')
+  FROM brz_beneficiario
   WHERE CAST(FL_EXCLUIDO AS INT) = 0
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY NU_BENEFICIARIO ORDER BY dt_carga_bronze DESC
@@ -167,7 +170,7 @@ plano_limpo AS (
     NM_ACOMODACAO,
     CAST(FL_COPARTICIPACAO AS INT)             AS FL_COPARTICIPACAO,
     CAST(VL_MENSALIDADE_BASE AS DECIMAL(18,2)) AS VL_MENSALIDADE_BASE
-  FROM IDENTIFIER(meu_schema || '.brz_plano')
+  FROM brz_plano
   WHERE CAST(FL_EXCLUIDO AS INT) = 0
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY CD_PLANO ORDER BY dt_carga_bronze DESC
@@ -189,10 +192,10 @@ INNER JOIN plano_limpo p ON p.CD_PLANO = b.CD_PLANO;
 -- COMMAND ----------
 
 SELECT
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento')) AS prestadores_validos,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.qua_prestador_orfao'))           AS prestadores_em_quarentena,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.slv_beneficiario_plano'))        AS beneficiarios_validos,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.brz_prestador')
+  (SELECT COUNT(*) FROM slv_prestador_estabelecimento) AS prestadores_validos,
+  (SELECT COUNT(*) FROM qua_prestador_orfao)           AS prestadores_em_quarentena,
+  (SELECT COUNT(*) FROM slv_beneficiario_plano)        AS beneficiarios_validos,
+  (SELECT COUNT(*) FROM brz_prestador
     WHERE CAST(FL_EXCLUIDO AS INT) = 0)                                             AS prestadores_nao_excluidos;
 
 -- COMMAND ----------

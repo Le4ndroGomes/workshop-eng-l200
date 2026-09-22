@@ -39,8 +39,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -59,7 +62,7 @@ SELECT
   SUM(CASE WHEN VL_PAGO < 0 THEN 1 ELSE 0 END)                           AS pago_negativo,
   SUM(CASE WHEN NU_AUTORIZACAO IS NULL THEN 1 ELSE 0 END)                AS sem_autorizacao,
   SUM(CASE WHEN CAST(FL_ATEND_POS_DESCRED AS INT) = 1 THEN 1 ELSE 0 END) AS atend_pos_descredenciamento
-FROM IDENTIFIER(meu_schema || '.brz_conta_medica');
+FROM brz_conta_medica;
 
 -- COMMAND ----------
 
@@ -85,7 +88,7 @@ SELECT
   CAST(VL_PAGO AS DECIMAL(18,2))        AS VL_PAGO,
   NU_AUTORIZACAO,
   CAST(FL_ATEND_POS_DESCRED AS INT)     AS FL_ATEND_POS_DESCRED
-FROM IDENTIFIER(meu_schema || '.brz_conta_medica')
+FROM brz_conta_medica
 WHERE CAST(FL_EXCLUIDO AS INT) = 0
 QUALIFY ROW_NUMBER() OVER (
   PARTITION BY NU_GUIA ORDER BY dt_carga_bronze DESC
@@ -102,7 +105,7 @@ QUALIFY ROW_NUMBER() OVER (
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.slv_conta_medica') AS
+CREATE OR REPLACE TABLE slv_conta_medica AS
 SELECT
   c.NU_GUIA,
   c.NU_COMPETENCIA,
@@ -128,11 +131,11 @@ SELECT
   c.NU_AUTORIZACAO,
   c.FL_ATEND_POS_DESCRED
 FROM vw_conta_dedup c
-INNER JOIN IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento') p   -- RI: prestador
+INNER JOIN slv_prestador_estabelecimento p   -- RI: prestador
         ON p.NU_PRESTADOR = c.NU_PRESTADOR
-INNER JOIN IDENTIFIER(meu_schema || '.brz_procedimento') pr              -- RI: procedimento
+INNER JOIN brz_procedimento pr              -- RI: procedimento
         ON CAST(pr.CD_PROCEDIMENTO AS BIGINT) = c.CD_PROCEDIMENTO
-INNER JOIN IDENTIFIER(meu_schema || '.slv_beneficiario_plano') b         -- RI: beneficiário
+INNER JOIN slv_beneficiario_plano b         -- RI: beneficiário
         ON b.NU_BENEFICIARIO = c.NU_BENEFICIARIO
 WHERE c.DT_APRESENTACAO >= c.DT_ATENDIMENTO                              -- regra de data
   AND c.VL_PAGO >= 0                                                     -- regra de valor
@@ -149,7 +152,7 @@ WHERE c.DT_APRESENTACAO >= c.DT_ATENDIMENTO                              -- regr
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.qua_conta_invalida') AS
+CREATE OR REPLACE TABLE qua_conta_invalida AS
 WITH avaliada AS (
   SELECT
     c.NU_GUIA, c.NU_PRESTADOR, c.NU_COMPETENCIA, c.VL_PAGO,
@@ -164,11 +167,11 @@ WITH avaliada AS (
       WHEN c.VL_PAGO > c.VL_APRESENTADO                  THEN 'PAGO_MAIOR_QUE_APRESENTADO'
     END AS motivo_quarentena
   FROM vw_conta_dedup c
-  LEFT JOIN IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento') p
+  LEFT JOIN slv_prestador_estabelecimento p
          ON p.NU_PRESTADOR = c.NU_PRESTADOR
-  LEFT JOIN IDENTIFIER(meu_schema || '.brz_procedimento') pr
+  LEFT JOIN brz_procedimento pr
          ON CAST(pr.CD_PROCEDIMENTO AS BIGINT) = c.CD_PROCEDIMENTO
-  LEFT JOIN IDENTIFIER(meu_schema || '.slv_beneficiario_plano') b
+  LEFT JOIN slv_beneficiario_plano b
          ON b.NU_BENEFICIARIO = c.NU_BENEFICIARIO
 )
 SELECT
@@ -186,8 +189,8 @@ WHERE motivo_quarentena IS NOT NULL;
 
 SELECT
   (SELECT COUNT(*) FROM vw_conta_dedup)                                  AS apos_dedup,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.slv_conta_medica'))   AS validas,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.qua_conta_invalida')) AS em_quarentena;
+  (SELECT COUNT(*) FROM slv_conta_medica)   AS validas,
+  (SELECT COUNT(*) FROM qua_conta_invalida) AS em_quarentena;
 
 -- COMMAND ----------
 
@@ -195,7 +198,7 @@ SELECT
   motivo_quarentena,
   COUNT(*)               AS contas,
   ROUND(SUM(VL_PAGO), 2) AS valor_retido
-FROM IDENTIFIER(meu_schema || '.qua_conta_invalida')
+FROM qua_conta_invalida
 GROUP BY ALL
 ORDER BY contas DESC;
 

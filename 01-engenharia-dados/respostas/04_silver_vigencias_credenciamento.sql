@@ -40,8 +40,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -53,7 +56,7 @@ DECLARE OR REPLACE VARIABLE meu_schema STRING
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.slv_prestador_evento') AS
+CREATE OR REPLACE TABLE slv_prestador_evento AS
 WITH eventos_historico AS (
   SELECT
     CAST(NU_PRESTADOR AS BIGINT)             AS NU_PRESTADOR,
@@ -66,7 +69,7 @@ WITH eventos_historico AS (
     CAST(DT_DESCREDENCIAMENTO AS DATE)       AS DT_DESCREDENCIAMENTO,
     CAST(CD_MOTIVO_DESCREDENCIAMENTO AS INT) AS CD_MOTIVO_DESCREDENCIAMENTO,
     CAST(DT_AUDIT AS DATE)                   AS DT_AUDIT
-  FROM IDENTIFIER(meu_schema || '.brz_prestador_auditoria')
+  FROM brz_prestador_auditoria
   WHERE CAST(FL_EXCLUIDO AS INT) = 0
     -- QUALIDADE: os parênteses corrigem a precedência entre AND e OR.
     -- Sem eles, o filtro FL_EXCLUIDO seria anulado pelos OR seguintes.
@@ -83,7 +86,7 @@ eventos_atual AS (
     NU_UNIDADE, NU_CAPACIDADE_ATEND_MES, DT_CREDENCIAMENTO, DT_DESCREDENCIAMENTO,
     CD_MOTIVO_DESCREDENCIAMENTO,
     CURRENT_DATE() AS DT_AUDIT
-  FROM IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento')
+  FROM slv_prestador_estabelecimento
 )
 SELECT * FROM eventos_historico
 UNION ALL
@@ -100,7 +103,7 @@ SELECT * FROM eventos_atual;
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.slv_prestador_vigencia') AS
+CREATE OR REPLACE TABLE slv_prestador_vigencia AS
 WITH vigencias AS (
   SELECT
     *,
@@ -110,7 +113,7 @@ WITH vigencias AS (
       DT_CREDENCIAMENTO,
       DT_AUDIT
     ) AS DT_INICIO_VIGENCIA
-  FROM IDENTIFIER(meu_schema || '.slv_prestador_evento')
+  FROM slv_prestador_evento
 ),
 preenchido AS (
   SELECT
@@ -146,9 +149,9 @@ WHERE DT_FIM_VIGENCIA > DT_INICIO_VIGENCIA;   -- QUALIDADE: vigência de duraç�
 -- COMMAND ----------
 
 SELECT
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.slv_prestador_evento'))   AS eventos,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.slv_prestador_vigencia')) AS vigencias,
-  (SELECT COUNT(DISTINCT NU_PRESTADOR) FROM IDENTIFIER(meu_schema || '.slv_prestador_vigencia')) AS prestadores;
+  (SELECT COUNT(*) FROM slv_prestador_evento)   AS eventos,
+  (SELECT COUNT(*) FROM slv_prestador_vigencia) AS vigencias,
+  (SELECT COUNT(DISTINCT NU_PRESTADOR) FROM slv_prestador_vigencia) AS prestadores;
 
 -- COMMAND ----------
 
@@ -157,7 +160,7 @@ SELECT NU_PRESTADOR, DT_INICIO_VIGENCIA, DT_FIM_VIGENCIA, fim_anterior
 FROM (
   SELECT NU_PRESTADOR, DT_INICIO_VIGENCIA, DT_FIM_VIGENCIA,
          LAG(DT_FIM_VIGENCIA) OVER (PARTITION BY NU_PRESTADOR ORDER BY DT_INICIO_VIGENCIA) AS fim_anterior
-  FROM IDENTIFIER(meu_schema || '.slv_prestador_vigencia')
+  FROM slv_prestador_vigencia
 )
 WHERE fim_anterior > DT_INICIO_VIGENCIA;
 
@@ -167,7 +170,7 @@ WHERE fim_anterior > DT_INICIO_VIGENCIA;
 SELECT qt_especialidades_distintas, COUNT(*) AS prestadores
 FROM (
   SELECT NU_PRESTADOR, COUNT(DISTINCT CD_ESPECIALIDADE) AS qt_especialidades_distintas
-  FROM IDENTIFIER(meu_schema || '.slv_prestador_vigencia')
+  FROM slv_prestador_vigencia
   GROUP BY NU_PRESTADOR
 )
 GROUP BY ALL

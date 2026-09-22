@@ -116,18 +116,31 @@ errado, a pergunta certa é "o que faltou na minha descrição?".
 
 ## Isolamento por schema: como os notebooks fazem
 
-Toda célula que cria ou lê tabela usa uma variável de sessão:
+Cada participante tem o seu próprio schema, e todo notebook começa dizendo onde
+você está:
 
 ```sql
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;   -- 👈 troque pelo seu
 
-SELECT * FROM IDENTIFIER(meu_schema || '.brz_conta_medica');
+SELECT * FROM brz_conta_medica;
 ```
 
-`IDENTIFIER()` transforma uma string em nome de objeto. Assim o mesmo código roda
-no schema de cada pessoa **sem editar nada**. Rode a célula do `DECLARE` sempre no
-início de cada notebook (a variável vive na sessão, não no arquivo).
+Esse é o namespace de três níveis do Unity Catalog — `catálogo.schema.tabela`.
+`USE CATALOG` e `USE SCHEMA` fixam os dois primeiros níveis na sessão, e a partir
+daí você escreve só o nome da tabela. O ganho não é digitar menos: é que o mesmo
+SQL do exercício funciona em qualquer schema, e trocar de ambiente (sandbox para
+produção, por exemplo) é mudar duas linhas no topo, não trinta referências
+espalhadas pelo código.
+
+Duas consequências práticas. Primeira: o `USE` vale para a **sessão**, não para o
+arquivo — repita as duas linhas no início de cada notebook e novamente se o
+compute reiniciar. Segunda: se uma consulta reclamar que a tabela não existe,
+confira antes de tudo onde você está:
+
+```sql
+SELECT current_catalog(), current_schema();
+```
 
 ---
 

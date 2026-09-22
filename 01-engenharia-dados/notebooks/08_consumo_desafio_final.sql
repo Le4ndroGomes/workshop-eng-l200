@@ -42,8 +42,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -61,7 +64,7 @@ SELECT
   SUM(QT_CONTAS)                            AS contas,
   ROUND(SUM(VL_CUSTO_TOTAL) / 1000000, 2)   AS custo_milhoes,
   ROUND(100 * SUM(VL_GLOSA_TOTAL) / SUM(VL_APRESENTADO_TOTAL), 2) AS pct_glosa
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 GROUP BY ALL
 ORDER BY NU_COMPETENCIA;
 
@@ -79,7 +82,7 @@ SELECT
   NU_COMPETENCIA, QT_CONTAS,
   ROUND(VL_CUSTO_TOTAL, 2)  AS custo,
   IDX_CUSTO_TABELA, IDX_CUSTO_VS_PARES
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 WHERE FL_ANOMALIA_CUSTO = 1
 ORDER BY IDX_CUSTO_VS_PARES DESC
 LIMIT 20;
@@ -100,8 +103,8 @@ SELECT
   COUNT(*)                                 AS contas,
   ROUND(SUM(c.VL_PAGO) / 1000, 2)          AS custo_mil,
   ROUND(SUM(c.VL_PAGO) / COUNT(DISTINCT c.NU_BENEFICIARIO), 2) AS custo_por_beneficiario
-FROM IDENTIFIER(meu_schema || '.slv_conta_medica') c
-INNER JOIN IDENTIFIER(meu_schema || '.slv_beneficiario_plano') bp
+FROM slv_conta_medica c
+INNER JOIN slv_beneficiario_plano bp
         ON bp.NU_BENEFICIARIO = c.NU_BENEFICIARIO
 GROUP BY ALL
 ORDER BY custo_por_beneficiario DESC

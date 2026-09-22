@@ -39,8 +39,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -61,7 +64,7 @@ SELECT
   SUM(VL_GLOSA)                                    AS VL_GLOSA_TOTAL,
   SUM(VL_REFERENCIA * QT_ITEM)                     AS VL_REFERENCIA_TOTAL,
   SUM(FL_ATEND_POS_DESCRED)                        AS QT_CONTAS_POS_DESCREDENCIAMENTO
-FROM IDENTIFIER(meu_schema || '.slv_conta_medica')
+FROM slv_conta_medica
 GROUP BY ALL;
 
 -- COMMAND ----------
@@ -71,7 +74,7 @@ GROUP BY ALL;
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador') AS
+CREATE OR REPLACE TABLE gold_custo_utilizacao_prestador AS
 WITH com_vigencia AS (
   -- AS-OF JOIN: a competência escolhe a vigência que estava valendo naquela data
   SELECT
@@ -83,7 +86,7 @@ WITH com_vigencia AS (
     v.FL_STATUS_PRESTADOR,
     v.NU_CAPACIDADE_ATEND_MES
   FROM vw_conta_agregada a
-  INNER JOIN IDENTIFIER(meu_schema || '.slv_prestador_vigencia') v
+  INNER JOIN slv_prestador_vigencia v
           ON v.NU_PRESTADOR     = a.NU_PRESTADOR
          AND a.DT_COMPETENCIA  >= v.DT_INICIO_VIGENCIA
          AND a.DT_COMPETENCIA   < v.DT_FIM_VIGENCIA         -- fim exclusivo
@@ -99,7 +102,7 @@ com_dimensao AS (
     d.NM_PRESTADOR, d.CD_TIPO_PRESTADOR,
     d.CD_ESTABELECIMENTO, d.NM_ESTABELECIMENTO, d.SG_UF, d.NM_REGIAO
   FROM com_vigencia c
-  INNER JOIN IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento') d
+  INNER JOIN slv_prestador_estabelecimento d
           ON d.NU_PRESTADOR = c.NU_PRESTADOR
 ),
 metricas AS (
@@ -150,7 +153,7 @@ FROM metricas;
 
 SELECT
   (SELECT COUNT(*) FROM vw_conta_agregada)                                           AS pares_prestador_competencia,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')) AS linhas_gold;
+  (SELECT COUNT(*) FROM gold_custo_utilizacao_prestador) AS linhas_gold;
 
 -- COMMAND ----------
 
@@ -158,7 +161,7 @@ SELECT
   COUNT(*)                                          AS linhas,
   COUNT(DISTINCT SK_CUSTO_PRESTADOR_MES)            AS sks_distintas,
   COUNT(*) - COUNT(DISTINCT SK_CUSTO_PRESTADOR_MES) AS duplicadas
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador');
+FROM gold_custo_utilizacao_prestador;
 
 -- COMMAND ----------
 
@@ -167,7 +170,7 @@ SELECT
   COUNT(*)                                AS prestadores_com_conta,
   SUM(FL_ANOMALIA_CUSTO)                  AS prestadores_sinalizados,
   ROUND(SUM(VL_CUSTO_TOTAL) / 1000000, 2) AS custo_milhoes
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 GROUP BY ALL
 ORDER BY NU_COMPETENCIA;
 

@@ -52,8 +52,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -73,7 +76,7 @@ SELECT
   SUM(CASE WHEN VL_PAGO < 0 THEN 1 ELSE 0 END)                                AS pago_negativo,
   SUM(CASE WHEN NU_AUTORIZACAO IS NULL THEN 1 ELSE 0 END)                     AS sem_autorizacao,
   SUM(CASE WHEN CAST(FL_ATEND_POS_DESCRED AS INT) = 1 THEN 1 ELSE 0 END)      AS atend_pos_descredenciamento
-FROM IDENTIFIER(meu_schema || '.brz_conta_medica');
+FROM brz_conta_medica;
 
 -- COMMAND ----------
 
@@ -110,7 +113,7 @@ SELECT
   CAST(VL_PAGO AS DECIMAL(18,2))        AS VL_PAGO,
   NU_AUTORIZACAO,
   CAST(FL_ATEND_POS_DESCRED AS INT)     AS FL_ATEND_POS_DESCRED
-FROM IDENTIFIER(meu_schema || '.brz_conta_medica')
+FROM brz_conta_medica
 WHERE CAST(FL_EXCLUIDO AS INT) = 0                      -- QUALIDADE: conta estornada não conta
 QUALIFY ROW_NUMBER() OVER (
   PARTITION BY NU_GUIA ORDER BY dt_carga_bronze DESC
@@ -128,12 +131,12 @@ SELECT COUNT(*) AS linhas_apos_dedup FROM vw_conta_dedup;
 -- MAGIC Agora as camadas de **integridade referencial** e **regras de negócio**.
 -- MAGIC
 -- MAGIC **PROMPT sugerido para o Assistant:**
--- MAGIC > _"Crie a tabela IDENTIFIER(meu_schema || '.slv_conta_medica') a partir da view
+-- MAGIC > _"Crie a tabela slv_conta_medica a partir da view
 -- MAGIC > vw_conta_dedup, com INNER JOIN em
--- MAGIC > IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento') por NU_PRESTADOR,
--- MAGIC > INNER JOIN em IDENTIFIER(meu_schema || '.brz_procedimento') por
+-- MAGIC > slv_prestador_estabelecimento por NU_PRESTADOR,
+-- MAGIC > INNER JOIN em brz_procedimento por
 -- MAGIC > CD_PROCEDIMENTO e INNER JOIN em
--- MAGIC > IDENTIFIER(meu_schema || '.slv_beneficiario_plano') por NU_BENEFICIARIO.
+-- MAGIC > slv_beneficiario_plano por NU_BENEFICIARIO.
 -- MAGIC > Filtre apenas as contas onde DT_APRESENTACAO >= DT_ATENDIMENTO,
 -- MAGIC > VL_PAGO >= 0, VL_PAGO <= VL_APRESENTADO e o CD_ESTABELECIMENTO da conta é
 -- MAGIC > igual ao CD_ESTABELECIMENTO do cadastro do prestador. Traga as colunas da
@@ -158,7 +161,7 @@ SELECT COUNT(*) AS linhas_apos_dedup FROM vw_conta_dedup;
 -- MAGIC e com o valor**, cada conta que não entrou na fato.
 -- MAGIC
 -- MAGIC **PROMPT sugerido para o Assistant:**
--- MAGIC > _"Crie a tabela IDENTIFIER(meu_schema || '.qua_conta_invalida') a partir de
+-- MAGIC > _"Crie a tabela qua_conta_invalida a partir de
 -- MAGIC > vw_conta_dedup usando LEFT JOIN com slv_prestador_estabelecimento,
 -- MAGIC > brz_procedimento e slv_beneficiario_plano. Crie uma coluna
 -- MAGIC > motivo_quarentena com um CASE que retorna 'PRESTADOR_NULO' quando
@@ -187,8 +190,8 @@ SELECT COUNT(*) AS linhas_apos_dedup FROM vw_conta_dedup;
 
 SELECT
   (SELECT COUNT(*) FROM vw_conta_dedup)                                    AS apos_dedup,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.slv_conta_medica'))     AS validas,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.qua_conta_invalida'))   AS em_quarentena;
+  (SELECT COUNT(*) FROM slv_conta_medica)     AS validas,
+  (SELECT COUNT(*) FROM qua_conta_invalida)   AS em_quarentena;
 
 -- COMMAND ----------
 
@@ -201,7 +204,7 @@ SELECT
   motivo_quarentena,
   COUNT(*)                           AS contas,
   ROUND(SUM(VL_PAGO), 2)             AS valor_retido
-FROM IDENTIFIER(meu_schema || '.qua_conta_invalida')
+FROM qua_conta_invalida
 GROUP BY ALL
 ORDER BY contas DESC;
 

@@ -77,10 +77,13 @@ Cada pessoa trabalha em seu próprio schema dentro do catálogo
 `amil_workshop_trilha_tech`:
 
 ```sql
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
--- uso: IDENTIFIER(meu_schema || '.minha_tabela')
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;   -- 👈 cada participante troca esta linha uma vez
+-- uso: SELECT * FROM minha_tabela
 ```
+
+O `USE` vale para a sessão, não para o arquivo: as duas linhas se repetem no
+início de cada notebook.
 
 Os dados são gerados com `hash()`/`pmod()` — **nunca** `rand()` — portanto são
 idênticos em toda execução e em todos os schemas. Isso é o que torna o gabarito,

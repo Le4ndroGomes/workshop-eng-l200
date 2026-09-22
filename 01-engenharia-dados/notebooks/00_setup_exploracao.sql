@@ -87,17 +87,24 @@
 -- MAGIC %md
 -- MAGIC ## Seu schema pessoal
 -- MAGIC Cada participante trabalha em um schema próprio dentro do catálogo
--- MAGIC `amil_workshop_trilha_tech`. A variável abaixo resolve o seu schema a partir
--- MAGIC do seu usuário — assim o mesmo código funciona para todo mundo, sem edição.
+-- MAGIC `amil_workshop_trilha_tech`. `USE CATALOG` e `USE SCHEMA` definem onde você
+-- MAGIC está — depois disso, toda tabela é referenciada pelo nome simples
+-- MAGIC (`brz_conta_medica`), sem precisar repetir catálogo e schema em cada consulta.
+-- MAGIC
+-- MAGIC ⚠️ Essas duas linhas valem para a **sessão**. Repita-as no início de cada
+-- MAGIC notebook, e novamente se o compute reiniciar.
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
-SELECT meu_schema AS schema_de_trabalho;
+SELECT current_catalog() AS catalogo, current_schema() AS meu_schema;
 
 -- COMMAND ----------
 
@@ -108,13 +115,13 @@ SELECT meu_schema AS schema_de_trabalho;
 -- COMMAND ----------
 
 SELECT
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.raw_sgr_tb_estabelecimento')) AS estabelecimentos,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.raw_sgr_tb_prestador'))       AS prestadores,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.raw_sgr_au_prestador'))       AS eventos_auditoria,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.raw_sgb_tb_plano'))           AS planos,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.raw_sgb_tb_beneficiario'))    AS beneficiarios,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.raw_sia_tb_procedimento'))    AS procedimentos,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.raw_sia_tb_conta_medica'))    AS contas_medicas;
+  (SELECT COUNT(*) FROM raw_sgr_tb_estabelecimento) AS estabelecimentos,
+  (SELECT COUNT(*) FROM raw_sgr_tb_prestador)       AS prestadores,
+  (SELECT COUNT(*) FROM raw_sgr_au_prestador)       AS eventos_auditoria,
+  (SELECT COUNT(*) FROM raw_sgb_tb_plano)           AS planos,
+  (SELECT COUNT(*) FROM raw_sgb_tb_beneficiario)    AS beneficiarios,
+  (SELECT COUNT(*) FROM raw_sia_tb_procedimento)    AS procedimentos,
+  (SELECT COUNT(*) FROM raw_sia_tb_conta_medica)    AS contas_medicas;
 
 -- COMMAND ----------
 
@@ -144,7 +151,7 @@ SELECT
 
 SELECT NU_GUIA, NU_BENEFICIARIO, NU_PRESTADOR, CD_PROCEDIMENTO,
        DT_ATENDIMENTO, NU_COMPETENCIA, QT_ITEM, VL_APRESENTADO, VL_GLOSA, VL_PAGO
-FROM IDENTIFIER(meu_schema || '.raw_sia_tb_conta_medica')
+FROM raw_sia_tb_conta_medica
 LIMIT 20;
 
 -- COMMAND ----------
@@ -159,7 +166,7 @@ SELECT
   CAST(NU_COMPETENCIA AS INT)               AS competencia,
   COUNT(*)                                  AS contas,
   ROUND(SUM(VL_PAGO) / 1000000, 2)          AS custo_milhoes
-FROM IDENTIFIER(meu_schema || '.raw_sia_tb_conta_medica')
+FROM raw_sia_tb_conta_medica
 GROUP BY ALL
 ORDER BY competencia;
 
@@ -172,8 +179,8 @@ ORDER BY competencia;
 -- MAGIC
 -- MAGIC **PROMPT sugerido para o Assistant:**
 -- MAGIC > _"Conte quantos prestadores da tabela
--- MAGIC > IDENTIFIER(meu_schema || '.raw_sgr_tb_prestador') não têm estabelecimento
--- MAGIC > correspondente em IDENTIFIER(meu_schema || '.raw_sgr_tb_estabelecimento'),
+-- MAGIC > raw_sgr_tb_prestador não têm estabelecimento
+-- MAGIC > correspondente em raw_sgr_tb_estabelecimento,
 -- MAGIC > usando LEFT JOIN por CD_ESTABELECIMENTO e contando onde o estabelecimento
 -- MAGIC > é nulo. Faça o mesmo para contas médicas sem prestador correspondente."_
 -- MAGIC

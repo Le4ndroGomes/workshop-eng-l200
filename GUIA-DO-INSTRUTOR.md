@@ -29,7 +29,7 @@ Formato: hands-on, 100% SQL, exercícios resolvidos com o Databricks Assistant.
 | # | Módulo | Min | Objetivo de aprendizagem | Contexto de negócio | Conceito Databricks | ⭐ | Saída esperada | Checkpoint |
 |---|---|---|---|---|---|---|---|---|
 | — | Abertura | 10 | entender o problema | custo assistencial acima do orçado | — | — | turma sabe o que vai construir | todos rodaram o setup |
-| 00 | Setup e exploração | 20 | perfilar dados desconhecidos | três sistemas, nenhuma confiança | Unity Catalog, `IDENTIFIER`, perfilagem | 1 | volumetrias + órfãos contados | "qual é a fato?" |
+| 00 | Setup e exploração | 20 | perfilar dados desconhecidos | três sistemas, nenhuma confiança | Unity Catalog, `USE CATALOG`/`USE SCHEMA`, perfilagem | 1 | volumetrias + órfãos contados | "qual é a fato?" |
 | 01 | Bronze | 20 | ingestão fiel e rastreável | precisamos auditar o número depois | CTAS idempotente, metadados | 1 | 7 tabelas `brz_*` | `_dt_ingestao` vs `dt_carga_bronze` |
 | 02 | Silver — dimensões | 35 | tipagem, dedup, RI, quarentena | cadastro de rede sujo | `QUALIFY ROW_NUMBER`, quarentena | 2 | `slv_prestador_estabelecimento`, `slv_beneficiario_plano`, `qua_prestador_orfao` | por que `DISTINCT` não resolve |
 | 03 | Silver — fato | 35 | regras de negócio e quarentena com motivo | contas duplicadas e impossíveis | `INNER JOIN` p/ RI, `CASE` ordenado | 2 | `slv_conta_medica`, `qua_conta_invalida` | o que merece quarentena |
@@ -82,7 +82,8 @@ no gerador:
 | Falsos positivos de anomalia | **0** — o índice normalizado dos prestadores normais fica abaixo de ~1,25, e o limiar é 1,5 |
 
 Se a turma obtiver números **muito** diferentes, quase sempre é uma das três
-causas: não rodou o módulo anterior; esqueceu o `DECLARE` do `meu_schema`; ou
+causas: não rodou o módulo anterior; esqueceu de rodar o `USE CATALOG`/`USE SCHEMA`
+(ou deixou `seu_usuario` sem trocar); ou
 nomeou a tabela com outro nome no exercício ⭐.
 
 ---

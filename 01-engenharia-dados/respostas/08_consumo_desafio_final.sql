@@ -54,8 +54,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -65,7 +68,7 @@ DECLARE OR REPLACE VARIABLE meu_schema STRING
 
 -- COMMAND ----------
 
-SELECT * FROM IDENTIFIER(meu_schema || '.dq_metricas') WHERE severidade = 'erro';
+SELECT * FROM dq_metricas WHERE severidade = 'erro';
 
 -- COMMAND ----------
 
@@ -82,7 +85,7 @@ SELECT
   ROUND(SUM(VL_REFERENCIA_TOTAL) / 1000000, 2)                AS referencia_milhoes,
   ROUND(SUM(VL_CUSTO_TOTAL) / 1000000, 2)                     AS custo_milhoes,
   ROUND(SUM(VL_CUSTO_TOTAL) / SUM(VL_REFERENCIA_TOTAL), 4)    AS idx_custo_tabela
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 GROUP BY ALL
 ORDER BY NU_COMPETENCIA;
 
@@ -114,7 +117,7 @@ SELECT
     NULLIF(SUM(CASE WHEN NU_COMPETENCIA <= 202509 THEN VL_CUSTO_TOTAL END) /
            SUM(CASE WHEN NU_COMPETENCIA <= 202509 THEN VL_REFERENCIA_TOTAL END), 0)
     - 1), 1)                                                                     AS variacao_pct
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 GROUP BY ALL
 ORDER BY variacao_pct DESC;
 
@@ -136,7 +139,7 @@ ORDER BY variacao_pct DESC;
 WITH base AS (   -- o índice de cada prestador antes do evento
   SELECT NU_PRESTADOR,
          SUM(VL_CUSTO_TOTAL) / NULLIF(SUM(VL_REFERENCIA_TOTAL), 0) AS idx_base
-  FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+  FROM gold_custo_utilizacao_prestador
   WHERE NU_COMPETENCIA <= 202509
   GROUP BY NU_PRESTADOR
 ),
@@ -145,7 +148,7 @@ recente AS (
          SUM(g.VL_CUSTO_TOTAL)      AS custo,
          SUM(g.VL_REFERENCIA_TOTAL) AS referencia,
          MAX(g.FL_ANOMALIA_CUSTO)   AS sinalizado
-  FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador') g
+  FROM gold_custo_utilizacao_prestador g
   WHERE g.NU_COMPETENCIA >= 202510
   GROUP BY ALL
 )
@@ -170,12 +173,12 @@ ORDER BY custo_excedente DESC;
 
 WITH sinalizados AS (
   SELECT DISTINCT NU_PRESTADOR
-  FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+  FROM gold_custo_utilizacao_prestador
   WHERE FL_ANOMALIA_CUSTO = 1
 ),
 sem_causa_a AS (
   SELECT g.*
-  FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador') g
+  FROM gold_custo_utilizacao_prestador g
   LEFT ANTI JOIN sinalizados s ON s.NU_PRESTADOR = g.NU_PRESTADOR
 ),
 por_regiao AS (
@@ -208,8 +211,8 @@ SELECT
   g.NU_COMPETENCIA,
   COUNT(DISTINCT g.NU_PRESTADOR)                                          AS prestadores,
   ROUND(SUM(g.VL_CUSTO_TOTAL) / NULLIF(SUM(g.VL_REFERENCIA_TOTAL), 0), 4) AS idx_custo_tabela
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador') g
-INNER JOIN IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento') d
+FROM gold_custo_utilizacao_prestador g
+INNER JOIN slv_prestador_estabelecimento d
         ON d.NU_PRESTADOR = g.NU_PRESTADOR
 WHERE g.NM_REGIAO = 'Nordeste'
 GROUP BY ALL
@@ -228,7 +231,7 @@ ORDER BY g.NM_ESTABELECIMENTO, g.NU_COMPETENCIA;
 SELECT
   NU_COMPETENCIA,
   SUM(QT_CONTAS_POS_DESCREDENCIAMENTO) AS contas_pos_descredenciamento
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 GROUP BY ALL
 ORDER BY NU_COMPETENCIA;
 

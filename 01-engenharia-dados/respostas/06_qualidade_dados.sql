@@ -39,8 +39,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -49,86 +52,86 @@ DECLARE OR REPLACE VARIABLE meu_schema STRING
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.dq_metricas') AS
+CREATE OR REPLACE TABLE dq_metricas AS
 
 -- ---------- volumetria ----------
 SELECT 'silver_prestadores_validos' AS metrica,
        CAST(COUNT(*) AS STRING)     AS valor,
        'informativo'                AS severidade
-FROM IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento')
+FROM slv_prestador_estabelecimento
 
 UNION ALL
 SELECT 'silver_contas_validas', CAST(COUNT(*) AS STRING), 'informativo'
-FROM IDENTIFIER(meu_schema || '.slv_conta_medica')
+FROM slv_conta_medica
 
 UNION ALL
 SELECT 'gold_linhas', CAST(COUNT(*) AS STRING), 'informativo'
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 
 -- ---------- quarentenas ----------
 UNION ALL
 SELECT 'quarentena_prestador_orfao',
        CAST(COUNT(*) AS STRING),
        CASE WHEN COUNT(*) > 0 THEN 'atencao' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.qua_prestador_orfao')
+FROM qua_prestador_orfao
 
 UNION ALL
 SELECT 'quarentena_contas',
        CAST(COUNT(*) AS STRING),
        CASE WHEN COUNT(*) > 0 THEN 'atencao' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.qua_conta_invalida')
+FROM qua_conta_invalida
 
 UNION ALL
 SELECT 'quarentena_valor_retido',
        CAST(ROUND(COALESCE(SUM(VL_PAGO), 0), 2) AS STRING),
        'informativo'
-FROM IDENTIFIER(meu_schema || '.qua_conta_invalida')
+FROM qua_conta_invalida
 
 -- ---------- achados de operação (dado certo, problema real) ----------
 UNION ALL
 SELECT 'contas_sem_autorizacao',
        CAST(COUNT_IF(NU_AUTORIZACAO IS NULL) AS STRING),
        CASE WHEN COUNT_IF(NU_AUTORIZACAO IS NULL) > 0 THEN 'atencao' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.slv_conta_medica')
+FROM slv_conta_medica
 
 UNION ALL
 SELECT 'contas_pos_descredenciamento',
        CAST(COALESCE(SUM(FL_ATEND_POS_DESCRED), 0) AS STRING),
        CASE WHEN COALESCE(SUM(FL_ATEND_POS_DESCRED), 0) > 0 THEN 'atencao' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.slv_conta_medica')
+FROM slv_conta_medica
 
 UNION ALL
 SELECT 'gold_prestadores_anomalos',
        CAST(COALESCE(SUM(FL_ANOMALIA_CUSTO), 0) AS STRING),
        CASE WHEN COALESCE(SUM(FL_ANOMALIA_CUSTO), 0) > 0 THEN 'atencao' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 
 -- ---------- integridade estrutural da gold (erro = para o pipeline) ----------
 UNION ALL
 SELECT 'gold_sk_duplicadas',
        CAST(COUNT(*) - COUNT(DISTINCT SK_CUSTO_PRESTADOR_MES) AS STRING),
        CASE WHEN COUNT(*) - COUNT(DISTINCT SK_CUSTO_PRESTADOR_MES) > 0 THEN 'erro' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 
 UNION ALL
 SELECT 'gold_custo_negativo',
        CAST(COUNT_IF(VL_CUSTO_TOTAL < 0) AS STRING),
        CASE WHEN COUNT_IF(VL_CUSTO_TOTAL < 0) > 0 THEN 'erro' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 
 UNION ALL
 SELECT 'gold_idx_custo_nulo',
        CAST(COUNT_IF(IDX_CUSTO_TABELA IS NULL) AS STRING),
        CASE WHEN COUNT_IF(IDX_CUSTO_TABELA IS NULL) > 0 THEN 'erro' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 
 -- ---------- reconciliação: a gold não pode perder nem inventar dinheiro ----------
 UNION ALL
 SELECT 'reconciliacao_custo_silver_gold',
        CAST(ROUND(ABS(s.total - g.total), 2) AS STRING),
        CASE WHEN ROUND(ABS(s.total - g.total), 2) > 0.01 THEN 'erro' ELSE 'ok' END
-FROM      (SELECT SUM(VL_PAGO)        AS total FROM IDENTIFIER(meu_schema || '.slv_conta_medica')) s
-CROSS JOIN (SELECT SUM(VL_CUSTO_TOTAL) AS total FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')) g;
+FROM      (SELECT SUM(VL_PAGO)        AS total FROM slv_conta_medica) s
+CROSS JOIN (SELECT SUM(VL_CUSTO_TOTAL) AS total FROM gold_custo_utilizacao_prestador) g;
 
 -- COMMAND ----------
 
@@ -137,7 +140,7 @@ CROSS JOIN (SELECT SUM(VL_CUSTO_TOTAL) AS total FROM IDENTIFIER(meu_schema || '.
 
 -- COMMAND ----------
 
-SELECT * FROM IDENTIFIER(meu_schema || '.dq_metricas')
+SELECT * FROM dq_metricas
 ORDER BY CASE severidade WHEN 'erro' THEN 1 WHEN 'atencao' THEN 2
                          WHEN 'informativo' THEN 3 ELSE 4 END, metrica;
 
@@ -148,7 +151,7 @@ ORDER BY CASE severidade WHEN 'erro' THEN 1 WHEN 'atencao' THEN 2
 
 -- COMMAND ----------
 
-SELECT * FROM IDENTIFIER(meu_schema || '.dq_metricas') WHERE severidade = 'erro';
+SELECT * FROM dq_metricas WHERE severidade = 'erro';
 
 -- COMMAND ----------
 
@@ -161,7 +164,7 @@ SELECT * FROM IDENTIFIER(meu_schema || '.dq_metricas') WHERE severidade = 'erro'
 SELECT motivo_quarentena,
        COUNT(*)                    AS contas,
        ROUND(SUM(VL_PAGO), 2)      AS valor_retido
-FROM IDENTIFIER(meu_schema || '.qua_conta_invalida')
+FROM qua_conta_invalida
 GROUP BY ALL
 ORDER BY valor_retido DESC;
 

@@ -55,8 +55,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -67,27 +70,27 @@ DECLARE OR REPLACE VARIABLE meu_schema STRING
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.dq_metricas') AS
+CREATE OR REPLACE TABLE dq_metricas AS
 SELECT 'silver_prestadores_validos' AS metrica,
        CAST(COUNT(*) AS STRING)     AS valor,
        'informativo'                AS severidade
-FROM IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento')
+FROM slv_prestador_estabelecimento
 
 UNION ALL
 SELECT 'quarentena_prestador_orfao',
        CAST(COUNT(*) AS STRING),
        CASE WHEN COUNT(*) > 0 THEN 'atencao' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.qua_prestador_orfao')
+FROM qua_prestador_orfao
 
 UNION ALL
 SELECT 'gold_sk_duplicadas',
        CAST(COUNT(*) - COUNT(DISTINCT SK_CUSTO_PRESTADOR_MES) AS STRING),
        CASE WHEN COUNT(*) - COUNT(DISTINCT SK_CUSTO_PRESTADOR_MES) > 0 THEN 'erro' ELSE 'ok' END
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador');
+FROM gold_custo_utilizacao_prestador;
 
 -- COMMAND ----------
 
-SELECT * FROM IDENTIFIER(meu_schema || '.dq_metricas');
+SELECT * FROM dq_metricas;
 
 -- COMMAND ----------
 
@@ -95,7 +98,7 @@ SELECT * FROM IDENTIFIER(meu_schema || '.dq_metricas');
 -- MAGIC ## ⭐ Exercício-chave (com o Assistant) — completar o painel
 -- MAGIC
 -- MAGIC **PROMPT sugerido para o Assistant:**
--- MAGIC > _"Reescreva a tabela IDENTIFIER(meu_schema || '.dq_metricas') mantendo as três
+-- MAGIC > _"Reescreva a tabela dq_metricas mantendo as três
 -- MAGIC > métricas atuais e acrescentando, no mesmo padrão (metrica, valor como STRING,
 -- MAGIC > severidade), com UNION ALL:_
 -- MAGIC >
@@ -132,7 +135,7 @@ SELECT * FROM IDENTIFIER(meu_schema || '.dq_metricas');
 
 -- COMMAND ----------
 
-SELECT * FROM IDENTIFIER(meu_schema || '.dq_metricas')
+SELECT * FROM dq_metricas
 ORDER BY CASE severidade WHEN 'erro' THEN 1 WHEN 'atencao' THEN 2
                          WHEN 'informativo' THEN 3 ELSE 4 END, metrica;
 
@@ -145,7 +148,7 @@ ORDER BY CASE severidade WHEN 'erro' THEN 1 WHEN 'atencao' THEN 2
 
 -- COMMAND ----------
 
-SELECT * FROM IDENTIFIER(meu_schema || '.dq_metricas') WHERE severidade = 'erro';
+SELECT * FROM dq_metricas WHERE severidade = 'erro';
 
 -- COMMAND ----------
 

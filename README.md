@@ -89,8 +89,9 @@ do seu schema. Todo o pipeline fica isolado ali.
 
 ## Notas técnicas
 
-- Os notebooks SQL usam uma variável de sessão (`meu_schema`) + `IDENTIFIER()`
-  para isolar o schema de cada participante sem editar código.
+- Cada notebook começa com `USE CATALOG amil_workshop_trilha_tech;` e
+  `USE SCHEMA seu_usuario;`. O participante troca essa segunda linha uma vez, e
+  todas as consultas do módulo usam nomes simples de tabela.
 - O gerador de dados usa `hash()`/`pmod()` (determinístico e reprodutível),
   **não** `rand()`: o mesmo dado em toda execução e em todos os schemas.
 - O modelo de dados **não contém PII nem dado clínico**: nem nome, CPF, endereço

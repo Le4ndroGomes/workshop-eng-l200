@@ -36,8 +36,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -46,21 +49,21 @@ DECLARE OR REPLACE VARIABLE meu_schema STRING
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.brz_estabelecimento') AS
+CREATE OR REPLACE TABLE brz_estabelecimento AS
 SELECT *, CURRENT_TIMESTAMP() AS _dt_ingestao
-FROM IDENTIFIER(meu_schema || '.raw_sgr_tb_estabelecimento');
+FROM raw_sgr_tb_estabelecimento;
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.brz_prestador') AS
+CREATE OR REPLACE TABLE brz_prestador AS
 SELECT *, CURRENT_TIMESTAMP() AS _dt_ingestao
-FROM IDENTIFIER(meu_schema || '.raw_sgr_tb_prestador');
+FROM raw_sgr_tb_prestador;
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.brz_prestador_auditoria') AS
+CREATE OR REPLACE TABLE brz_prestador_auditoria AS
 SELECT *, CURRENT_TIMESTAMP() AS _dt_ingestao
-FROM IDENTIFIER(meu_schema || '.raw_sgr_au_prestador');
+FROM raw_sgr_au_prestador;
 
 -- COMMAND ----------
 
@@ -69,15 +72,15 @@ FROM IDENTIFIER(meu_schema || '.raw_sgr_au_prestador');
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.brz_plano') AS
+CREATE OR REPLACE TABLE brz_plano AS
 SELECT *, CURRENT_TIMESTAMP() AS _dt_ingestao
-FROM IDENTIFIER(meu_schema || '.raw_sgb_tb_plano');
+FROM raw_sgb_tb_plano;
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.brz_beneficiario') AS
+CREATE OR REPLACE TABLE brz_beneficiario AS
 SELECT *, CURRENT_TIMESTAMP() AS _dt_ingestao
-FROM IDENTIFIER(meu_schema || '.raw_sgb_tb_beneficiario');
+FROM raw_sgb_tb_beneficiario;
 
 -- COMMAND ----------
 
@@ -86,15 +89,15 @@ FROM IDENTIFIER(meu_schema || '.raw_sgb_tb_beneficiario');
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.brz_procedimento') AS
+CREATE OR REPLACE TABLE brz_procedimento AS
 SELECT *, CURRENT_TIMESTAMP() AS _dt_ingestao
-FROM IDENTIFIER(meu_schema || '.raw_sia_tb_procedimento');
+FROM raw_sia_tb_procedimento;
 
 -- COMMAND ----------
 
-CREATE OR REPLACE TABLE IDENTIFIER(meu_schema || '.brz_conta_medica') AS
+CREATE OR REPLACE TABLE brz_conta_medica AS
 SELECT *, CURRENT_TIMESTAMP() AS _dt_ingestao
-FROM IDENTIFIER(meu_schema || '.raw_sia_tb_conta_medica');
+FROM raw_sia_tb_conta_medica;
 
 -- COMMAND ----------
 
@@ -104,13 +107,13 @@ FROM IDENTIFIER(meu_schema || '.raw_sia_tb_conta_medica');
 -- COMMAND ----------
 
 SELECT
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.brz_estabelecimento'))     AS brz_estabelecimento,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.brz_prestador'))           AS brz_prestador,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.brz_prestador_auditoria')) AS brz_prestador_auditoria,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.brz_plano'))               AS brz_plano,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.brz_beneficiario'))        AS brz_beneficiario,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.brz_procedimento'))        AS brz_procedimento,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.brz_conta_medica'))        AS brz_conta_medica;
+  (SELECT COUNT(*) FROM brz_estabelecimento)     AS brz_estabelecimento,
+  (SELECT COUNT(*) FROM brz_prestador)           AS brz_prestador,
+  (SELECT COUNT(*) FROM brz_prestador_auditoria) AS brz_prestador_auditoria,
+  (SELECT COUNT(*) FROM brz_plano)               AS brz_plano,
+  (SELECT COUNT(*) FROM brz_beneficiario)        AS brz_beneficiario,
+  (SELECT COUNT(*) FROM brz_procedimento)        AS brz_procedimento,
+  (SELECT COUNT(*) FROM brz_conta_medica)        AS brz_conta_medica;
 
 -- COMMAND ----------
 

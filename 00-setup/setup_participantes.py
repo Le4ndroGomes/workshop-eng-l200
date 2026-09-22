@@ -142,15 +142,16 @@ if CATALOG not in catalogos:
             "CREATE SCHEMA/CREATE TABLE; ou\n"
             "  2) descomente a linha 'CATALOG = ...' no topo desta célula, apontando "
             f"para um catálogo que você já usa. Disponíveis aqui: {catalogos}\n\n"
-            "Depois, lembre-se de usar o MESMO catálogo no DECLARE de meu_schema "
-            "nos notebooks dos módulos."
+            "Depois, lembre-se de usar o MESMO catálogo no USE CATALOG "
+            "dos notebooks dos módulos."
         ) from erro
 
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {target_schema}")
 print(f"Schema pronto: {target_schema}")
 print(
     "\nNos notebooks dos módulos, use exatamente:\n"
-    f"  DECLARE OR REPLACE VARIABLE meu_schema STRING DEFAULT '{CATALOG}.{username}';"
+    f"  USE CATALOG {CATALOG};\n"
+    f"  USE SCHEMA {username};"
 )
 
 # COMMAND ----------

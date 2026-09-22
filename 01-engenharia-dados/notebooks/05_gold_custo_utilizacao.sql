@@ -66,8 +66,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -91,7 +94,7 @@ SELECT
   SUM(VL_GLOSA)                                         AS VL_GLOSA_TOTAL,
   SUM(VL_REFERENCIA * QT_ITEM)                          AS VL_REFERENCIA_TOTAL,
   SUM(FL_ATEND_POS_DESCRED)                             AS QT_CONTAS_POS_DESCREDENCIAMENTO
-FROM IDENTIFIER(meu_schema || '.slv_conta_medica')
+FROM slv_conta_medica
 GROUP BY ALL;
 
 -- COMMAND ----------
@@ -122,7 +125,7 @@ SELECT * FROM vw_conta_agregada ORDER BY VL_CUSTO_TOTAL DESC LIMIT 10;
 
 SELECT NU_PRESTADOR, CD_ESPECIALIDADE, FL_STATUS_PRESTADOR,
        DT_INICIO_VIGENCIA, DT_FIM_VIGENCIA
-FROM IDENTIFIER(meu_schema || '.slv_prestador_vigencia')
+FROM slv_prestador_vigencia
 QUALIFY COUNT(*) OVER (PARTITION BY NU_PRESTADOR) >= 3
 ORDER BY NU_PRESTADOR, DT_INICIO_VIGENCIA
 LIMIT 12;
@@ -133,11 +136,11 @@ LIMIT 12;
 -- MAGIC ## ⭐ Exercício-chave (com o Assistant) — a tabela gold
 -- MAGIC
 -- MAGIC **PROMPT sugerido para o Assistant** (peça em partes se preferir):
--- MAGIC > _"Crie a tabela IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+-- MAGIC > _"Crie a tabela gold_custo_utilizacao_prestador
 -- MAGIC > em três CTEs._
 -- MAGIC >
 -- MAGIC > _CTE 1 (com_vigencia): junte a view vw_conta_agregada com
--- MAGIC > IDENTIFIER(meu_schema || '.slv_prestador_vigencia') usando INNER JOIN por
+-- MAGIC > slv_prestador_vigencia usando INNER JOIN por
 -- MAGIC > NU_PRESTADOR, com DT_COMPETENCIA maior ou igual a DT_INICIO_VIGENCIA e menor
 -- MAGIC > que DT_FIM_VIGENCIA; mantenha uma linha por prestador e competência com
 -- MAGIC > QUALIFY ROW_NUMBER() OVER (PARTITION BY NU_PRESTADOR, NU_COMPETENCIA ORDER BY
@@ -145,7 +148,7 @@ LIMIT 12;
 -- MAGIC > FL_STATUS_PRESTADOR e NU_CAPACIDADE_ATEND_MES._
 -- MAGIC >
 -- MAGIC > _CTE 2 (com_dimensao): junte a CTE 1 com
--- MAGIC > IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento') por NU_PRESTADOR
+-- MAGIC > slv_prestador_estabelecimento por NU_PRESTADOR
 -- MAGIC > para trazer NM_PRESTADOR, CD_TIPO_PRESTADOR, CD_ESTABELECIMENTO,
 -- MAGIC > NM_ESTABELECIMENTO, SG_UF e NM_REGIAO._
 -- MAGIC >
@@ -185,7 +188,7 @@ LIMIT 12;
 
 SELECT
   (SELECT COUNT(*) FROM vw_conta_agregada)                                              AS pares_prestador_competencia,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador'))    AS linhas_gold;
+  (SELECT COUNT(*) FROM gold_custo_utilizacao_prestador)    AS linhas_gold;
 
 -- COMMAND ----------
 
@@ -200,7 +203,7 @@ SELECT
   COUNT(*)                                     AS linhas,
   COUNT(DISTINCT SK_CUSTO_PRESTADOR_MES)       AS sks_distintas,
   COUNT(*) - COUNT(DISTINCT SK_CUSTO_PRESTADOR_MES) AS duplicadas
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador');
+FROM gold_custo_utilizacao_prestador;
 
 -- COMMAND ----------
 
@@ -214,7 +217,7 @@ SELECT
   COUNT(*)                                  AS prestadores_com_conta,
   SUM(FL_ANOMALIA_CUSTO)                    AS prestadores_sinalizados,
   ROUND(SUM(VL_CUSTO_TOTAL) / 1000000, 2)   AS custo_milhoes
-FROM IDENTIFIER(meu_schema || '.gold_custo_utilizacao_prestador')
+FROM gold_custo_utilizacao_prestador
 GROUP BY ALL
 ORDER BY NU_COMPETENCIA;
 

@@ -57,8 +57,11 @@
 
 -- COMMAND ----------
 
-DECLARE OR REPLACE VARIABLE meu_schema STRING
-  DEFAULT 'amil_workshop_trilha_tech.' || replace(split(current_user(), '@')[0], '.', '_');
+-- 👇 TROQUE `seu_usuario` pelo nome do schema que o setup criou para você.
+--    É o seu e-mail antes do @, com o ponto trocado por underscore.
+--    Ex.: maria.silva@amil.com.br  ->  maria_silva
+USE CATALOG amil_workshop_trilha_tech;
+USE SCHEMA seu_usuario;
 
 -- COMMAND ----------
 
@@ -77,7 +80,7 @@ SELECT
              AND NU_UNIDADE        IS NULL
              AND DT_CREDENCIAMENTO IS NULL THEN 1 ELSE 0 END)       AS eventos_vazios,
   SUM(CASE WHEN NU_UNIDADE IS NULL THEN 1 ELSE 0 END)               AS sem_unidade
-FROM IDENTIFIER(meu_schema || '.brz_prestador_auditoria');
+FROM brz_prestador_auditoria;
 
 -- COMMAND ----------
 
@@ -107,7 +110,7 @@ SELECT
                 OR CD_ESPECIALIDADE  IS NOT NULL
                 OR NU_UNIDADE        IS NOT NULL
                 OR DT_CREDENCIAMENTO IS NOT NULL))                 AS com_parenteses
-FROM IDENTIFIER(meu_schema || '.brz_prestador_auditoria');
+FROM brz_prestador_auditoria;
 
 -- COMMAND ----------
 
@@ -118,16 +121,16 @@ FROM IDENTIFIER(meu_schema || '.brz_prestador_auditoria');
 -- MAGIC A linha do tempo completa é a união dos dois.
 -- MAGIC
 -- MAGIC **PROMPT sugerido para o Assistant:**
--- MAGIC > _"Crie a tabela IDENTIFIER(meu_schema || '.slv_prestador_evento') com um
+-- MAGIC > _"Crie a tabela slv_prestador_evento com um
 -- MAGIC > UNION ALL de duas partes. Primeira parte: de
--- MAGIC > IDENTIFIER(meu_schema || '.brz_prestador_auditoria'), com CAST de
+-- MAGIC > brz_prestador_auditoria, com CAST de
 -- MAGIC > NU_PRESTADOR e CD_ESTABELECIMENTO para BIGINT, FL_STATUS_PRESTADOR,
 -- MAGIC > CD_ESPECIALIDADE, NU_UNIDADE, CD_MOTIVO_DESCREDENCIAMENTO e
 -- MAGIC > NU_CAPACIDADE_ATEND_MES para INT, DT_CREDENCIAMENTO, DT_DESCREDENCIAMENTO e
 -- MAGIC > DT_AUDIT para DATE; filtrando FL_EXCLUIDO = 0 E, entre parênteses, pelo menos
 -- MAGIC > um entre FL_STATUS_PRESTADOR, CD_ESPECIALIDADE, NU_UNIDADE ou
 -- MAGIC > DT_CREDENCIAMENTO não nulo. Segunda parte: as mesmas colunas de
--- MAGIC > IDENTIFIER(meu_schema || '.slv_prestador_estabelecimento'), usando
+-- MAGIC > slv_prestador_estabelecimento, usando
 -- MAGIC > CURRENT_DATE() como DT_AUDIT."_
 -- MAGIC
 -- MAGIC ⚠️ Os parênteses são obrigatórios — veja a célula anterior.
@@ -149,8 +152,8 @@ FROM IDENTIFIER(meu_schema || '.brz_prestador_auditoria');
 -- MAGIC - atributo nulo herda **o último valor conhecido antes dele**.
 -- MAGIC
 -- MAGIC **PROMPT sugerido para o Assistant:**
--- MAGIC > _"Crie a tabela IDENTIFIER(meu_schema || '.slv_prestador_vigencia') a partir
--- MAGIC > de IDENTIFIER(meu_schema || '.slv_prestador_evento'). Em uma CTE, calcule
+-- MAGIC > _"Crie a tabela slv_prestador_vigencia a partir
+-- MAGIC > de slv_prestador_evento. Em uma CTE, calcule
 -- MAGIC > DT_FIM_VIGENCIA = DT_AUDIT e DT_INICIO_VIGENCIA =
 -- MAGIC > COALESCE(LAG(DT_AUDIT) OVER (PARTITION BY NU_PRESTADOR ORDER BY DT_AUDIT),
 -- MAGIC > DT_CREDENCIAMENTO, DT_AUDIT). Em uma segunda CTE, preencha os atributos
@@ -180,9 +183,9 @@ FROM IDENTIFIER(meu_schema || '.brz_prestador_auditoria');
 -- COMMAND ----------
 
 SELECT
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.slv_prestador_evento'))            AS eventos,
-  (SELECT COUNT(*) FROM IDENTIFIER(meu_schema || '.slv_prestador_vigencia'))          AS vigencias,
-  (SELECT COUNT(DISTINCT NU_PRESTADOR) FROM IDENTIFIER(meu_schema || '.slv_prestador_vigencia')) AS prestadores;
+  (SELECT COUNT(*) FROM slv_prestador_evento)            AS eventos,
+  (SELECT COUNT(*) FROM slv_prestador_vigencia)          AS vigencias,
+  (SELECT COUNT(DISTINCT NU_PRESTADOR) FROM slv_prestador_vigencia) AS prestadores;
 
 -- COMMAND ----------
 
@@ -196,7 +199,7 @@ SELECT NU_PRESTADOR, DT_INICIO_VIGENCIA, DT_FIM_VIGENCIA, fim_anterior
 FROM (
   SELECT NU_PRESTADOR, DT_INICIO_VIGENCIA, DT_FIM_VIGENCIA,
          LAG(DT_FIM_VIGENCIA) OVER (PARTITION BY NU_PRESTADOR ORDER BY DT_INICIO_VIGENCIA) AS fim_anterior
-  FROM IDENTIFIER(meu_schema || '.slv_prestador_vigencia')
+  FROM slv_prestador_vigencia
 )
 WHERE fim_anterior > DT_INICIO_VIGENCIA;
 
@@ -214,7 +217,7 @@ SELECT
   COUNT(*) AS prestadores
 FROM (
   SELECT NU_PRESTADOR, COUNT(DISTINCT CD_ESPECIALIDADE) AS qt_especialidades_distintas
-  FROM IDENTIFIER(meu_schema || '.slv_prestador_vigencia')
+  FROM slv_prestador_vigencia
   GROUP BY NU_PRESTADOR
 )
 GROUP BY ALL
