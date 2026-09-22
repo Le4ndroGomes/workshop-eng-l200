@@ -79,13 +79,47 @@ print(f"Schema de trabalho: {target_schema}")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 3. Criação do schema pessoal
-# MAGIC O catálogo `amil_workshop_trilha_tech` já existe; criamos apenas o seu schema.
+# MAGIC ## 3. Criação do catálogo e do schema pessoal
+# MAGIC
+# MAGIC No workshop, o catálogo `amil_workshop_trilha_tech` normalmente **já existe**
+# MAGIC (criado pelo instrutor). Se não existir, a célula abaixo tenta criá-lo.
+# MAGIC
+# MAGIC Sem permissão de `CREATE CATALOG`? Rode com um catálogo que você já tenha,
+# MAGIC descomentando e ajustando a linha `CATALOG = ...` abaixo — nada mais no
+# MAGIC workshop muda, porque todos os notebooks derivam o schema desta variável.
 
 # COMMAND ----------
 
+# Para usar um catálogo já existente (ex.: workspace, main, sandbox), descomente:
+# CATALOG = "workspace"
+# catalog_q     = quote_identifier(CATALOG)
+# target_schema = f"{catalog_q}.{schema_q}"
+
+catalogos = [r[0] for r in spark.sql("SHOW CATALOGS").collect()]
+
+if CATALOG not in catalogos:
+    print(f"Catálogo '{CATALOG}' não existe. Tentando criar...")
+    try:
+        spark.sql(f"CREATE CATALOG IF NOT EXISTS {catalog_q}")
+        print(f"Catálogo criado: {CATALOG}")
+    except Exception as erro:
+        raise RuntimeError(
+            f"Não foi possível criar o catálogo '{CATALOG}': {erro}\n\n"
+            "Duas saídas:\n"
+            "  1) peça ao administrador do workspace um catálogo com permissão de "
+            "CREATE SCHEMA/CREATE TABLE; ou\n"
+            "  2) descomente a linha 'CATALOG = ...' no topo desta célula, apontando "
+            f"para um catálogo que você já usa. Disponíveis aqui: {catalogos}\n\n"
+            "Depois, lembre-se de usar o MESMO catálogo no DECLARE de meu_schema "
+            "nos notebooks dos módulos."
+        ) from erro
+
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {target_schema}")
 print(f"Schema pronto: {target_schema}")
+print(
+    "\nNos notebooks dos módulos, use exatamente:\n"
+    f"  DECLARE OR REPLACE VARIABLE meu_schema STRING DEFAULT '{CATALOG}.{username}';"
+)
 
 # COMMAND ----------
 
