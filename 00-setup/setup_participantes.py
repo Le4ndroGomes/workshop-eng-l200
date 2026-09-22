@@ -289,45 +289,55 @@ print(f"OK: {prest_tbl}")
 
 spark.sql(f"""
 CREATE OR REPLACE TABLE {audit_tbl} AS
+WITH prestador_base AS (
+  SELECT NU_PRESTADOR, CD_ESTABELECIMENTO, CD_CNES, FL_STATUS_PRESTADOR,
+         DT_CREDENCIAMENTO, DT_DESCREDENCIAMENTO, CD_MOTIVO_DESCREDENCIAMENTO,
+         NU_CAPACIDADE_ATEND_MES,
+         -- cada prestador recebe de 1 a 3 eventos de auditoria (0..max_ev)
+         pmod(hash(NU_PRESTADOR,'nev'),3) AS max_ev
+  FROM {prest_tbl}
+  WHERE CD_ESTABELECIMENTO <> 9999   -- órfãos não têm auditoria (só quarentena, mód. 02)
+),
+eventos_expandidos AS (
+  -- um registro de auditoria por evento do prestador
+  SELECT b.*, explode(sequence(0, b.max_ev)) AS evento
+  FROM prestador_base b
+),
+eventos AS (
+  SELECT
+    e.*,
+    -- ~2% dos eventos vêm completamente vazios (bug do sistema de origem)
+    CASE WHEN pmod(hash(e.NU_PRESTADOR,'vazio',e.evento),50) = 0 THEN 1 ELSE 0 END AS vazio_fl
+  FROM eventos_expandidos e
+)
 SELECT
-  CASE WHEN t.evento = 0 THEN CAST(1 AS DECIMAL(38,10)) ELSE CAST(2 AS DECIMAL(38,10)) END AS CD_ACAO,
+  CASE WHEN p.evento = 0 THEN CAST(1 AS DECIMAL(38,10)) ELSE CAST(2 AS DECIMAL(38,10)) END AS CD_ACAO,
   p.NU_PRESTADOR,
   p.CD_ESTABELECIMENTO,
   p.CD_CNES,
   -- evento vazio: todos os atributos de negócio nulos
-  CASE WHEN vazio.fl = 1 THEN NULL
-       WHEN t.evento = element_at(p._max_ev_arr, 1) THEN p.FL_STATUS_PRESTADOR
+  CASE WHEN p.vazio_fl = 1 THEN NULL
+       WHEN p.evento = p.max_ev THEN p.FL_STATUS_PRESTADOR
        ELSE CAST(2 AS DECIMAL(38,10)) END                                             AS FL_STATUS_PRESTADOR,
-  CASE WHEN vazio.fl = 1 THEN NULL
-       ELSE CAST(1 + pmod(hash(p.NU_PRESTADOR,'esp',t.evento),8) AS DECIMAL(38,10)) END AS CD_ESPECIALIDADE,
+  CASE WHEN p.vazio_fl = 1 THEN NULL
+       ELSE CAST(1 + pmod(hash(p.NU_PRESTADOR,'esp',p.evento),8) AS DECIMAL(38,10)) END AS CD_ESPECIALIDADE,
   -- ~20% dos eventos vêm sem unidade (além dos eventos vazios)
-  CASE WHEN vazio.fl = 1 OR pmod(hash(p.NU_PRESTADOR,'unin',t.evento),5) = 0 THEN NULL
-       ELSE CAST(1 + pmod(hash(p.NU_PRESTADOR,'uni',t.evento),4) AS DECIMAL(38,10)) END AS NU_UNIDADE,
-  CASE WHEN vazio.fl = 1 THEN NULL
+  CASE WHEN p.vazio_fl = 1 OR pmod(hash(p.NU_PRESTADOR,'unin',p.evento),5) = 0 THEN NULL
+       ELSE CAST(1 + pmod(hash(p.NU_PRESTADOR,'uni',p.evento),4) AS DECIMAL(38,10)) END AS NU_UNIDADE,
+  CASE WHEN p.vazio_fl = 1 THEN NULL
        ELSE CAST(p.DT_CREDENCIAMENTO AS TIMESTAMP) END                                AS DT_CREDENCIAMENTO,
-  CASE WHEN t.evento = element_at(p._max_ev_arr,1) AND p.FL_STATUS_PRESTADOR = 4
+  CASE WHEN p.evento = p.max_ev AND p.FL_STATUS_PRESTADOR = 4
        THEN p.DT_DESCREDENCIAMENTO END                                                AS DT_DESCREDENCIAMENTO,
-  CASE WHEN t.evento = element_at(p._max_ev_arr,1) AND p.FL_STATUS_PRESTADOR = 4
+  CASE WHEN p.evento = p.max_ev AND p.FL_STATUS_PRESTADOR = 4
        THEN p.CD_MOTIVO_DESCREDENCIAMENTO END                                         AS CD_MOTIVO_DESCREDENCIAMENTO,
   p.NU_CAPACIDADE_ATEND_MES,
-  CAST(DATE_ADD(p.DT_CREDENCIAMENTO, t.evento * (180 + pmod(hash(p.NU_PRESTADOR, t.evento),1200))) AS TIMESTAMP) AS DT_AUDIT,
+  CAST(DATE_ADD(p.DT_CREDENCIAMENTO, p.evento * (180 + pmod(hash(p.NU_PRESTADOR, p.evento),1200))) AS TIMESTAMP) AS DT_AUDIT,
   CASE WHEN pmod(hash(p.NU_PRESTADOR,'op'),2)=0 THEN 'SIS_REDE' ELSE 'ANALISTA_REDE' END AS CD_OPERADOR,
   -- ~2% dos eventos são estornos (FL_EXCLUIDO = 1)
-  CAST(CASE WHEN pmod(hash(p.NU_PRESTADOR,'aexc',t.evento),50)=0 THEN 1 ELSE 0 END AS DECIMAL(38,10)) AS FL_EXCLUIDO,
-  CONCAT(CAST(p.NU_PRESTADOR AS STRING), '_', CAST(t.evento AS STRING))               AS merge_key,
+  CAST(CASE WHEN pmod(hash(p.NU_PRESTADOR,'aexc',p.evento),50)=0 THEN 1 ELSE 0 END AS DECIMAL(38,10)) AS FL_EXCLUIDO,
+  CONCAT(CAST(p.NU_PRESTADOR AS STRING), '_', CAST(p.evento AS STRING))               AS merge_key,
   CURRENT_TIMESTAMP()                                                                 AS dt_carga_bronze
-FROM (
-  SELECT NU_PRESTADOR, CD_ESTABELECIMENTO, CD_CNES, FL_STATUS_PRESTADOR,
-         DT_CREDENCIAMENTO, DT_DESCREDENCIAMENTO, CD_MOTIVO_DESCREDENCIAMENTO,
-         NU_CAPACIDADE_ATEND_MES,
-         array(pmod(hash(NU_PRESTADOR,'nev'),3)) AS _max_ev_arr
-  FROM {prest_tbl}
-  WHERE CD_ESTABELECIMENTO <> 9999   -- órfãos não têm auditoria (só quarentena, mód. 02)
-) p
-LATERAL VIEW explode(sequence(0, pmod(hash(p.NU_PRESTADOR,'nev'),3))) t AS evento
-CROSS JOIN LATERAL (
-  SELECT CASE WHEN pmod(hash(p.NU_PRESTADOR,'vazio',t.evento),50) = 0 THEN 1 ELSE 0 END AS fl
-) vazio
+FROM eventos p
 """)
 print(f"OK: {audit_tbl}")
 
