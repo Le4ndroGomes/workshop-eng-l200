@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Modelagem — Workshop Amil x Databricks (L200)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js" integrity="sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF" crossorigin="anonymous"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #16191d;
+    --ink-soft: #55606d;
+    --line: #dfe4ea;
+    --bg: #fbfcfd;
+    --card: #ffffff;
+    --blue: #1976d2;
+    --blue-bg: #e8f2fd;
+    --red: #c62828;
+    --red-bg: #fdecec;
+    --amber: #b06000;
+    --amber-bg: #fdf3e3;
+    --green: #1b7a44;
+    --green-bg: #e9f6ef;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.62 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 28px 96px; }
+
+  header.top { border-bottom: 3px solid var(--ink); padding-bottom: 20px; margin-bottom: 8px; }
+  header.top .kicker {
+    font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 700;
+  }
+  header.top h1 { font-size: 34px; line-height: 1.18; margin: 8px 0 6px; letter-spacing: -.02em; }
+  header.top p.sub { margin: 0; color: var(--ink-soft); font-size: 15px; }
+
+  .synthetic {
+    border-left: 4px solid var(--blue); background: var(--blue-bg);
+    padding: 12px 16px; border-radius: 4px; margin: 22px 0 0; font-size: 14.5px;
+  }
+
+  section { margin-top: 52px; }
+  h2 {
+    font-size: 13px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 700;
+    border-bottom: 1px solid var(--line); padding-bottom: 8px; margin: 0 0 18px;
+  }
+  h2 span.num { color: var(--blue); margin-right: 8px; }
+  h3 { font-size: 19px; margin: 30px 0 8px; letter-spacing: -.01em; }
+  p { margin: 0 0 14px; }
+  p.lead { font-size: 18px; line-height: 1.55; }
+  .muted { color: var(--ink-soft); }
+  code {
+    font: 13.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #f1f3f6; padding: 1px 5px; border-radius: 3px;
+  }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 8px; padding: 20px 22px; margin: 18px 0;
+  }
+  .diagram { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 22px 8px; overflow-x: auto; }
+  .diagram pre.mermaid { margin: 0; text-align: center; }
+  .caption { font-size: 13.5px; color: var(--ink-soft); margin: 10px 2px 0; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; margin: 16px 0; background: var(--card); }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); background: #f7f9fb; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .p-quar { color: var(--red); background: var(--red-bg); }
+  .p-fix  { color: var(--green); background: var(--green-bg); }
+  .p-keep { color: var(--amber); background: var(--amber-bg); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .cause { border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; background: var(--card); }
+  .cause.a { border-top: 4px solid var(--green); }
+  .cause.b { border-top: 4px solid var(--red); }
+  .cause h4 { margin: 0 0 4px; font-size: 17px; }
+  .cause .verdict { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+  .cause.a .verdict { color: var(--green); }
+  .cause.b .verdict { color: var(--red); }
+
+  .formula {
+    font: 14px/1.9 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #f7f9fb; border: 1px solid var(--line); border-left: 4px solid var(--blue);
+    border-radius: 4px; padding: 14px 18px; overflow-x: auto; white-space: pre;
+  }
+  footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="kicker">Workshop Amil × Databricks · Engenharia de Dados L200</div>
+  <h1>A modelagem por trás do problema<br/>de custo assistencial</h1>
+  <p class="sub">Sete tabelas de origem, três sistemas, quinze defeitos plantados e uma pergunta do CFO.</p>
+</header>
+
+<div class="synthetic">
+  <strong>Todos os dados utilizados no workshop são sintéticos e não representam pacientes reais.</strong>
+  O cadastro de beneficiários não contém nome, CPF, endereço nem qualquer dado clínico identificável.
+</div>
+
+<section>
+  <h2><span class="num">01</span>O problema, em uma frase</h2>
+  <p class="lead">
+    O custo assistencial fechou <strong>acima do orçado</strong> nos últimos meses. A Diretoria
+    Financeira quer saber <em>por quê</em> — e a resposta precisa vir com número, não com opinião.
+  </p>
+  <p>
+    A dificuldade não é escrever a consulta. É que o número está espalhado por três sistemas que
+    não conversam, e cada um deles mente de um jeito diferente: guias reenviadas contam duas vezes,
+    prestadores apontam para estabelecimentos que não existem, valores pagos aparecem negativos e o
+    cadastro do prestador de hoje não é o cadastro que valia quando o atendimento aconteceu. Somar
+    <code>VL_PAGO</code> direto da origem produz um número — só não um número em que se possa confiar.
+  </p>
+  <p>
+    O workshop é a construção do caminho entre essas sete tabelas sujas e uma resposta defensável.
+    Os diagramas abaixo mostram esse caminho.
+  </p>
+</section>
+
+<section>
+  <h2><span class="num">02</span>Os sistemas de origem e como eles se ligam</h2>
+  <p>
+    Três sistemas simulados, com convenções de nome diferentes de propósito — o participante precisa
+    lidar com isso na mesma frase SQL. A tabela fato é <code>raw_sia_tb_conta_medica</code>: é onde
+    está o dinheiro, e é a mais suja de todas.
+  </p>
+  <div class="diagram">
+<pre class="mermaid">
+erDiagram
+  ESTABELECIMENTO ||--o{ PRESTADOR : "sedia"
+  PRESTADOR       ||--o{ AUDITORIA : "gera histórico"
+  PLANO           ||--o{ BENEFICIARIO : "contrata"
+  PRESTADOR       ||--o{ CONTA_MEDICA : "executa"
+  BENEFICIARIO    ||--o{ CONTA_MEDICA : "recebe"
+  PROCEDIMENTO    ||--o{ CONTA_MEDICA : "tipifica"
+  ESTABELECIMENTO ||--o{ CONTA_MEDICA : "local do atendimento"
+
+  ESTABELECIMENTO {
+    bigint CD_ESTABELECIMENTO PK
+    string NM_ESTABELECIMENTO
+    string CD_TIPO_ESTABELECIMENTO
+    string SG_UF
+    string NM_REGIAO
+    int QT_LEITOS
+    string NU_INSCRICAO_MUNICIPAL "100pct nula"
+  }
+  PRESTADOR {
+    bigint NU_PRESTADOR PK
+    bigint CD_ESTABELECIMENTO FK "pode ser 9999"
+    bigint CD_CNES
+    bigint CD_ESPECIALIDADE
+    bigint FL_STATUS_PRESTADOR
+    bigint NU_CAPACIDADE_ATEND_MES
+    date DT_CREDENCIAMENTO
+    date DT_DESCREDENCIAMENTO
+  }
+  AUDITORIA {
+    bigint CD_ACAO
+    bigint NU_PRESTADOR FK
+    bigint CD_ESPECIALIDADE "nulo em evento vazio"
+    bigint NU_UNIDADE "nulo em 20pct"
+    timestamp DT_AUDIT "ordena o SCD2"
+    string CD_OPERADOR
+    bigint FL_EXCLUIDO
+  }
+  PLANO {
+    bigint CD_PLANO PK
+    string NM_PLANO
+    string CD_SEGMENTACAO_ANS
+    bigint FL_COPARTICIPACAO
+    decimal VL_MENSALIDADE_BASE
+  }
+  BENEFICIARIO {
+    bigint NU_BENEFICIARIO PK
+    bigint CD_PLANO FK
+    string NU_CARTEIRA "sintetica"
+    string SG_UF
+    string NM_REGIAO
+    string CD_FAIXA_ETARIA_ANS
+    string CD_SEXO
+  }
+  PROCEDIMENTO {
+    bigint CD_PROCEDIMENTO PK
+    string NM_PROCEDIMENTO
+    bigint CD_GRUPO_PROCEDIMENTO
+    decimal VL_REFERENCIA "base da metrica"
+    bigint FL_ALTA_COMPLEXIDADE
+  }
+  CONTA_MEDICA {
+    bigint NU_GUIA PK "duplica em 2pct"
+    bigint NU_PRESTADOR FK "nulo em 0,4pct"
+    bigint NU_BENEFICIARIO FK
+    bigint CD_PROCEDIMENTO FK "inexistente em 1pct"
+    bigint CD_ESTABELECIMENTO FK "divergente em 0,8pct"
+    date DT_ATENDIMENTO
+    date DT_APRESENTACAO "anterior em 0,7pct"
+    int NU_COMPETENCIA "202501 a 202512"
+    decimal VL_APRESENTADO
+    decimal VL_GLOSA
+    decimal VL_PAGO "negativo ou inflado em 0,8pct"
+    string NU_AUTORIZACAO "nula em 6pct"
+  }
+</pre>
+  </div>
+  <p class="caption">
+    As anotações entre aspas são os defeitos plantados. Eles não são acidente: cada um existe para
+    forçar uma decisão de engenharia específica.
+  </p>
+</section>
+
+<section>
+  <h2><span class="num">03</span>O caminho do dado — landing até gold</h2>
+  <p>
+    Cada camada tem uma única responsabilidade, e a regra mais importante é a da bronze:
+    <strong>nada é corrigido lá</strong>. Só se acrescenta metadado de ingestão. Toda correção é
+    explícita, rastreável e acontece na silver — que é também onde nasce a quarentena.
+  </p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  subgraph SRC["Sistemas de origem (simulados pelo setup, determinístico)"]
+    direction LR
+    SGR["SGR<br/>rede credenciada"]
+    SGB["SGB<br/>beneficiários"]
+    SIA["SIA<br/>contas médicas"]
+  end
+
+  LAND["<b>LANDING</b> — raw_sgr_* · raw_sgb_* · raw_sia_*<br/><i>cópia fiel, defeitos preservados</i>"]
+  BRZ["<b>BRONZE</b> — 7 tabelas brz_*<br/><i>CTAS idempotente + _dt_ingestao · nada é corrigido</i>"]
+
+  DIM["<b>slv_prestador_estabelecimento</b><br/>dimensão · tipagem, dedup, RI"]
+  DIM2["<b>slv_beneficiario_plano</b><br/>dimensão · sem PII"]
+  FATO["<b>slv_conta_medica</b><br/>fato limpa · regras de valor e data"]
+  EVT["<b>slv_prestador_evento</b><br/>auditoria + estado atual"]
+  VIG["<b>slv_prestador_vigencia</b><br/>SCD Tipo 2 · intervalos [início, fim)"]
+
+  QUAR["<b>QUARENTENA</b><br/>qua_prestador_orfao<br/>qua_conta_invalida<br/><i>motivo + valor retido</i>"]
+
+  GOLD["<b>GOLD</b> — gold_custo_utilizacao_prestador<br/>grão: prestador × competência<br/>as-of join + índice de anomalia"]
+
+  DQ["<b>dq_metricas</b> (mód. 06)<br/>painel + porta de qualidade<br/>reconciliação silver ↔ gold"]
+  CONS["<b>Consumo</b> (mód. 08)<br/>custo por região, especialidade, plano<br/>desafio final do CFO"]
+
+  SGR --> LAND
+  SGB --> LAND
+  SIA --> LAND
+  LAND -->|"módulo 01"| BRZ
+  BRZ -->|"módulo 02"| DIM
+  BRZ -->|"módulo 02"| DIM2
+  BRZ -->|"módulo 03"| FATO
+  BRZ -->|"módulo 04"| EVT
+  EVT --> VIG
+  DIM --> FATO
+  DIM2 --> FATO
+  DIM -.->|"rejeitados"| QUAR
+  FATO -.->|"rejeitados"| QUAR
+  FATO -->|"módulo 05"| GOLD
+  VIG -->|"as-of join"| GOLD
+  GOLD --> DQ
+  GOLD --> CONS
+  QUAR --> DQ
+
+  classDef land fill:#f1f3f6,stroke:#b9c2cd,color:#16191d
+  classDef brz  fill:#f6ecdf,stroke:#c9a97a,color:#16191d
+  classDef slv  fill:#eef1f4,stroke:#9aa7b4,color:#16191d
+  classDef gld  fill:#fdf3d4,stroke:#d4b23c,color:#16191d
+  classDef qua  fill:#fdecec,stroke:#d98d8d,color:#16191d
+  classDef out  fill:#e8f2fd,stroke:#8fbce8,color:#16191d
+  class LAND land
+  class BRZ brz
+  class DIM,DIM2,FATO,EVT,VIG slv
+  class GOLD gld
+  class QUAR qua
+  class DQ,CONS out
+</pre>
+  </div>
+  <p class="caption">
+    As setas pontilhadas são o ponto pedagógico central: nada é descartado em silêncio. Todo registro
+    rejeitado vai para a quarentena com o motivo, para que o negócio possa perguntar
+    <em>"onde foram parar os R$ X que não estão no relatório?"</em>.
+  </p>
+</section>
+
+<section>
+  <h2><span class="num">04</span>Os três destinos de um registro</h2>
+  <p>
+    Esta é a decisão que o participante toma dezenas de vezes ao longo do workshop, e ela tem
+    exatamente três saídas. Confundi-las é o erro mais caro em pipeline de produção.
+  </p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  REG(["Registro chega<br/>da bronze"]) --> D1{"A chave<br/>existe e é única?"}
+  D1 -->|não| Q["<b>QUARENTENA</b><br/>qua_* com motivo_quarentena"]
+  D1 -->|sim| D2{"Os valores e datas<br/>são possíveis?"}
+  D2 -->|não| Q
+  D2 -->|sim| D3{"O dado é feio<br/>mas legítimo?<br/><small>ex.: NU_AUTORIZACAO nula</small>"}
+  D3 -->|"sim — é métrica<br/>de processo"| M["<b>SEGUE PARA A FATO</b><br/>e vira indicador no dq_metricas"]
+  D3 -->|não| OK["<b>SEGUE PARA A FATO</b><br/>slv_conta_medica"]
+
+  classDef q fill:#fdecec,stroke:#d98d8d,color:#16191d
+  classDef k fill:#e9f6ef,stroke:#8ccaa6,color:#16191d
+  class Q q
+  class OK,M k
+</pre>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Defeito plantado</th><th>Onde</th><th>Volume</th><th>Destino</th><th>Módulo</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>prestador aponta para estabelecimento 9999 (inexistente)</td><td>prestador</td><td>~2%</td><td><span class="pill p-quar">quarentena</span></td><td>02</td></tr>
+      <tr><td>duas versões do mesmo estabelecimento (ids 1, 4, 9)</td><td>estabelecimento</td><td>3 ids</td><td><span class="pill p-fix">deduplicar</span></td><td>02</td></tr>
+      <tr><td><code>NU_INSCRICAO_MUNICIPAL</code> 100% nula</td><td>estabelecimento</td><td>100%</td><td><span class="pill p-keep">perfilar e descartar</span></td><td>00</td></tr>
+      <tr><td>guias reenviadas e reprocessadas</td><td>conta médica</td><td>~2%</td><td><span class="pill p-fix">deduplicar</span></td><td>03</td></tr>
+      <tr><td><code>FL_EXCLUIDO = 1</code> (exclusão lógica)</td><td>várias</td><td>~1–2%</td><td><span class="pill p-fix">filtrar</span></td><td>02–04</td></tr>
+      <tr><td><code>NU_PRESTADOR</code> nulo</td><td>conta médica</td><td>~0,4%</td><td><span class="pill p-quar">quarentena</span></td><td>03</td></tr>
+      <tr><td><code>CD_PROCEDIMENTO</code> inexistente</td><td>conta médica</td><td>~1%</td><td><span class="pill p-quar">quarentena</span></td><td>03</td></tr>
+      <tr><td><code>VL_PAGO</code> negativo ou maior que o apresentado</td><td>conta médica</td><td>~0,8%</td><td><span class="pill p-quar">quarentena</span></td><td>03</td></tr>
+      <tr><td><code>DT_APRESENTACAO</code> anterior ao atendimento</td><td>conta médica</td><td>~0,7%</td><td><span class="pill p-quar">quarentena</span></td><td>03</td></tr>
+      <tr><td>estabelecimento da conta diverge do cadastro do prestador</td><td>conta médica</td><td>~0,8%</td><td><span class="pill p-quar">quarentena</span></td><td>03</td></tr>
+      <tr><td><code>NU_AUTORIZACAO</code> nula</td><td>conta médica</td><td>~6%</td><td><span class="pill p-keep">métrica de processo</span></td><td>03 / 06</td></tr>
+      <tr><td>atendimento após o descredenciamento</td><td>conta médica</td><td>~1%</td><td><span class="pill p-keep">achado de negócio</span></td><td>03 / 06</td></tr>
+      <tr><td>eventos de auditoria totalmente vazios</td><td>auditoria</td><td>~1,5%</td><td><span class="pill p-fix">filtrar (cuidado com <code>OR</code>)</span></td><td>04</td></tr>
+      <tr><td><code>NU_UNIDADE</code> nulo em eventos parciais</td><td>auditoria</td><td>~20%</td><td><span class="pill p-fix">forward fill</span></td><td>04</td></tr>
+    </tbody>
+  </table>
+  <p class="caption">
+    Repare que três linhas <strong>não</strong> vão para a quarentena. Saber o que não corrigir é
+    metade da competência: autorização nula é indicador de processo, e atendimento após
+    descredenciamento é um achado que o negócio precisa ver, não um erro a ser escondido.
+  </p>
+</section>
+
+<section>
+  <h2><span class="num">05</span>Por que o cadastro de hoje não serve — o as-of join</h2>
+  <p>
+    Um prestador muda de especialidade, de unidade e de status ao longo do tempo. Se a gold usar o
+    cadastro <em>atual</em>, todo o histórico é reescrito: um atendimento de março de 2025 aparece
+    classificado na especialidade que o prestador só passou a ter em outubro. A comparação com pares
+    desmorona, e com ela o indicador de anomalia.
+  </p>
+  <p>
+    Por isso a auditoria vira um SCD Tipo 2 com intervalos <code>[início, fim)</code>, e a conta é
+    ligada à vigência que valia <strong>na data da competência</strong>.
+  </p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  subgraph TL["Linha do tempo do prestador 70023 — slv_prestador_vigencia"]
+    direction LR
+    V1["<b>vigência 1</b><br/>2023-04 → 2024-11<br/>especialidade: Clínica Médica<br/>unidade 2"]
+    V2["<b>vigência 2</b><br/>2024-11 → 2025-08<br/>especialidade: Cardiologia<br/>unidade 2"]
+    V3["<b>vigência 3</b><br/>2025-08 → 9999-12-31<br/>especialidade: Cardiologia<br/>unidade 4"]
+    V1 --> V2 --> V3
+  end
+
+  C1(["conta de<br/><b>202503</b>"]) -.->|"DT_COMPETENCIA<br/>&lt; DT_FIM_VIGENCIA"| V2
+  C2(["conta de<br/><b>202511</b>"]) -.-> V3
+
+  classDef v fill:#eef1f4,stroke:#9aa7b4,color:#16191d
+  classDef c fill:#e8f2fd,stroke:#8fbce8,color:#16191d
+  class V1,V2,V3 v
+  class C1,C2 c
+</pre>
+  </div>
+  <p class="caption">
+    O fim da vigência é <strong>exclusivo</strong> (<code>&lt;</code>, não <code>&lt;=</code>). Um único
+    sinal de igual a mais duplica a conta na fronteira entre duas vigências e infla o custo — é a
+    armadilha que mais trava a turma no módulo 05.
+  </p>
+</section>
+
+<section>
+  <h2><span class="num">06</span>A métrica que responde ao CFO</h2>
+  <p>
+    Custo médio por conta é a resposta intuitiva, e é errada: um prestador que faz procedimentos
+    caros tem custo médio alto sem cobrar nada a mais. O que se quer medir é <em>sobrepreço</em>, não
+    <em>mix</em>. A saída é ancorar cada conta no valor de referência do próprio procedimento e depois
+    normalizar pelos pares.
+  </p>
+  <div class="formula">IDX_CUSTO_TABELA   = SUM(VL_PAGO) / SUM(VL_REFERENCIA * QT_ITEM)
+
+IDX_CUSTO_VS_PARES = IDX_CUSTO_TABELA
+                     / AVG(IDX_CUSTO_TABELA) OVER (
+                         PARTITION BY CD_ESPECIALIDADE, NU_COMPETENCIA
+                       )
+
+FL_ANOMALIA_CUSTO  = 1  quando  IDX_CUSTO_VS_PARES >= 1.5
+                             e  QT_CONTAS          >= 10</div>
+  <p>
+    O denominador neutraliza o mix. A normalização responde <em>"caro em relação a quem faz o mesmo
+    tipo de coisa"</em>. O piso de volume evita acusar um prestador com três contas no mês. Na
+    simulação, os prestadores normais chegam no máximo a ≈1,22 e os com sobrepreço partem de ≈2,96 —
+    zero falso positivo com o limiar em 1,5.
+  </p>
+</section>
+
+<section>
+  <h2><span class="num">07</span>O desafio final — e o ponto cego proposital</h2>
+  <p>
+    O aumento de custo tem <strong>duas causas de naturezas diferentes</strong>. O indicador que a
+    turma acabou de construir encontra a primeira e é estruturalmente cego à segunda. Descobrir isso
+    é o objetivo do exercício.
+  </p>
+  <div class="grid2">
+    <div class="cause a">
+      <h4>Causa A — sobrepreço concentrado</h4>
+      <div class="verdict">O FL_ANOMALIA_CUSTO acende</div>
+      <p class="muted" style="margin:0">
+        Dez prestadores passam a cobrar cerca de 4× o valor de referência a partir da competência
+        <code>202510</code>. Como o desvio é individual e grande, o índice normalizado pelos pares
+        dispara. É a causa que todo mundo acha.
+      </p>
+    </div>
+    <div class="cause b">
+      <h4>Causa B — aumento regional difuso</h4>
+      <div class="verdict">O FL_ANOMALIA_CUSTO permanece apagado</div>
+      <p class="muted" style="margin:0">
+        Nos estabelecimentos de Salvador e Recife, <em>todos</em> os prestadores sobem cerca de 60% a
+        partir de <code>202510</code>. Como a média dos pares sobe junto, a razão entre o prestador e
+        seus pares quase não se move. O indicador não vê.
+      </p>
+    </div>
+  </div>
+  <div class="card" style="border-left:4px solid var(--blue)">
+    <p style="margin:0">
+      <strong>A pergunta que destrava a turma:</strong> <em>"que tipo de aumento este indicador nunca
+      pegaria?"</em> — qualquer métrica normalizada por um grupo é cega a um movimento que afeta o
+      grupo inteiro. Detectar a causa B exige olhar a série temporal por região, não o desvio entre
+      pares. É a lição que sobrevive ao workshop.
+    </p>
+  </div>
+</section>
+
+<footer>
+  Workshop Amil × Databricks · Engenharia de Dados L200 · geração de dados determinística
+  (<code>hash()</code>/<code>pmod()</code>, nunca <code>rand()</code>), isolada por participante em
+  <code>amil_workshop_trilha_tech.&lt;usuario&gt;</code>.
+  Detalhes completos em <code>BLUEPRINT.md</code> e <code>GUIA-DO-INSTRUTOR.md</code>.
+</footer>
+
+</div>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: "strict",
+    theme: "base",
+    themeVariables: {
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontSize: "14px",
+      primaryColor: "#eef1f4",
+      primaryTextColor: "#16191d",
+      primaryBorderColor: "#9aa7b4",
+      lineColor: "#6b7683",
+      tertiaryColor: "#f7f9fb"
+    },
+    flowchart: { curve: "basis", padding: 14 },
+    er: { layoutDirection: "TB", entityPadding: 12 }
+  });
+</script>
+</body>
+</html>
